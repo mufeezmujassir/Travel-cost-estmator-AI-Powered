@@ -1,55 +1,73 @@
 import { useState } from 'react'
 import { toast } from 'react-hot-toast'
-import axios from 'axios'
+import { travelAPI } from '../services/api'
 
 export const useTravelEstimation = () => {
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState(null)
   const [error, setError] = useState(null)
 
-  const estimateTravel = async (formData,vibe) => {
+  const estimateTravel = async (formData, vibe) => {
     setLoading(true)
     setError(null)
     setResults(null)
+    
     const payload = {
       origin: formData.origin.trim(),
       destination: formData.destination.trim(),
-      start_date: formData.startDate,  // Rename to start_date
-      return_date: formData.returnDate,  // Rename to return_date
+      start_date: formData.startDate,
+      return_date: formData.returnDate,
       travelers: parseInt(formData.travelers, 10),
-      budget: parseFloat(formData.budget) || null,  // Optional, send null if 0
-      vibe: vibe.id.toLowerCase()  // Send string like "adventure"
+      budget: parseFloat(formData.budget) || 0,
+      vibe: vibe.id.toLowerCase()
     };
-    console.log('Sending payload to backend:', payload);  // Debug log
+
+    console.log('🚀 Sending travel estimation request:', payload);
+
     try {
-      // Simulate API call delay for demo
-      const response = await axios.post('http://localhost:8000/api/estimate-travel', payload, {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const response = await travelAPI.estimateTravel(payload);
       
-      setResults(response.data)
+      console.log('✅ Travel estimation successful:', response.data);
+      setResults(response.data);
+      toast.success('Travel plan generated successfully!');
       
-      
-      toast.success('Travel plan generated successfully!')
+      return { success: true, data: response.data };
       
     } catch (err) {
+      console.error('❌ Travel estimation failed:', err);
+      
       let errorMessage = 'Failed to generate travel plan';
+      
       if (err.response?.status === 422) {
-        errorMessage = err.response.data.detail.map(e => `${e.loc.join('.')}: ${e.msg}`).join('\n');
+        if (Array.isArray(err.response.data.detail)) {
+          errorMessage = err.response.data.detail.map(e => `${e.loc.join('.')}: ${e.msg}`).join('\n');
+        } else {
+          errorMessage = err.response.data.detail || 'Validation error';
+        }
       } else if (err.response?.data?.detail) {
         errorMessage = err.response.data.detail;
+      } else if (err.message) {
+        errorMessage = err.message;
       }
+      
       setError(errorMessage);
       toast.error(errorMessage);
+      return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
+  }
+
+  const resetResults = () => {
+    setResults(null);
+    setError(null);
   }
 
   return {
     estimateTravel,
     loading,
     results,
-    error
+    error,
+    resetResults
   }
 }
