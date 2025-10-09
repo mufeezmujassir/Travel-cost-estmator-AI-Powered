@@ -61,7 +61,7 @@ class HotelContextService:
         
         # Step 1: Search for "best neighborhoods to stay in [destination]"
         search_query = f"best neighborhoods areas to stay in {destination} for tourists"
-        search_results = await self.serp_service._web_search(search_query, num_results=5)
+        search_results = await self.serp_service.web_search(search_query, num_results=5)
         
         # Step 2: Extract information from search results
         context_text = ""
@@ -110,7 +110,7 @@ Return ONLY a JSON object with this structure:
         
         # Step 1: Search for weather and tourism information
         search_query = f"{destination} best time to visit weather crowds tourism seasons"
-        search_results = await self.serp_service._web_search(search_query, num_results=5)
+        search_results = await self.serp_service.web_search(search_query, num_results=5)
         
         # Step 2: Extract context from search results
         context_text = ""
