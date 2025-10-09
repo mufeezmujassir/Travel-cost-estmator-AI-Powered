@@ -79,13 +79,22 @@ const VibeSelector = ({ onVibeSelect, onBack, formData }) => {
   ]
 
   const handleVibeSelect = (vibe) => {
+    console.log('🎯 Selecting vibe:', vibe.name);
     setSelectedVibe(vibe)
-    setTimeout(() => {
-      onVibeSelect(vibe)
-    }, 300)
+    // Call onVibeSelect immediately without delay
+    onVibeSelect(vibe)
   }
 
   const getSeasonRecommendation = (vibe) => {
+    if (!formData.startDate) {
+      return {
+        isOptimal: false,
+        currentSeason: 'unknown',
+        recommendedSeason: vibe.season,
+        message: `Select travel dates to get season recommendations`
+      }
+    }
+
     const currentDate = new Date(formData.startDate)
     const currentMonth = currentDate.getMonth() + 1
     
@@ -102,7 +111,7 @@ const VibeSelector = ({ onVibeSelect, onBack, formData }) => {
       recommendedSeason: vibe.season,
       message: isOptimalSeason 
         ? `Perfect timing! ${currentSeason} is ideal for ${vibe.name.toLowerCase()} experiences.`
-        : `Consider visiting in ${vibe.recommendedSeason} for the best ${vibe.name.toLowerCase()} experience.`
+        : `Consider visiting in ${vibe.season} for the best ${vibe.name.toLowerCase()} experience.`
     }
   }
 
@@ -130,7 +139,11 @@ const VibeSelector = ({ onVibeSelect, onBack, formData }) => {
           return (
             <motion.div
               key={vibe.id}
-              className={`vibe-card ${selectedVibe?.id === vibe.id ? 'selected' : ''}`}
+              className={`relative cursor-pointer rounded-xl shadow-lg transition-all duration-300 ${
+                selectedVibe?.id === vibe.id 
+                  ? 'ring-4 ring-blue-500 scale-105' 
+                  : 'hover:shadow-xl'
+              }`}
               onClick={() => handleVibeSelect(vibe)}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -156,7 +169,7 @@ const VibeSelector = ({ onVibeSelect, onBack, formData }) => {
                 </div>
               </div>
               
-              <div className="p-4 bg-white">
+              <div className="p-4 bg-white rounded-b-xl">
                 <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mb-3 ${
                   seasonInfo.isOptimal 
                     ? 'bg-green-100 text-green-800' 
@@ -183,20 +196,25 @@ const VibeSelector = ({ onVibeSelect, onBack, formData }) => {
         })}
       </div>
 
+      <div className="text-center">
+        <button
+          onClick={onBack}
+          className="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          <ArrowLeft className="w-4 h-4 inline mr-2" />
+          Back to Form
+        </button>
+      </div>
+
       {selectedVibe && (
         <motion.div
-          className="text-center"
+          className="mt-6 p-4 bg-blue-50 rounded-lg text-center"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
         >
-          <button
-            onClick={onBack}
-            className="btn-secondary mr-4"
-          >
-            <ArrowLeft className="w-4 h-4 inline mr-2" />
-            Back to Form
-          </button>
+          <p className="text-blue-800">
+            Selected: <strong>{selectedVibe.name}</strong> - Generating your travel plan...
+          </p>
         </motion.div>
       )}
     </motion.div>
