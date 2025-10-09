@@ -71,10 +71,12 @@ class RecommendationAgent(BaseAgent):
         Make the activities match the {request.vibe.value} vibe.
         Include travel time between locations where appropriate.
         
-        IMPORTANT: 
-        - All prices must be NUMBERS (integers or decimals), NOT expressions
-        - total_cost must be a calculated NUMBER (sum of all activity prices multiplied by {request.travelers} travelers)
-        - Do NOT use arithmetic expressions like (0 + 20 + 150) * 2, calculate the actual number
+        CRITICAL RULES FOR JSON GENERATION:
+        1. ALL numeric values MUST be actual numbers (integers or decimals)
+        2. NEVER use mathematical expressions or formulas (like "2 * 100" or "(0 + 50 + 200)")
+        3. Calculate all totals BEFORE generating JSON
+        4. The "total_cost" field must contain the FINAL calculated number only
+        5. Example: If activities cost 50 + 100 + 30 for 2 travelers, total_cost should be 360, NOT "2 * (50 + 100 + 30)"
         
         Respond ONLY in valid JSON format as an object with 'itinerary' key:
         {{
@@ -90,12 +92,25 @@ class RecommendationAgent(BaseAgent):
                             "duration": "X hours",
                             "price": 50,
                             "category": "category"
+                        }},
+                        {{
+                            "name": "Another Activity",
+                            "description": "Description",
+                            "location": "Location",
+                            "time": "2:00 PM",
+                            "duration": "1 hour",
+                            "price": 30,
+                            "category": "dining"
                         }}
                     ],
-                    "total_cost": 100
+                    "total_cost": 160
                 }}
             ]
         }}
+        
+        IMPORTANT: In the example above, total_cost = (50 + 30) * 2 travelers = 160
+        You MUST write "total_cost": 160, NOT "total_cost": 2 * (50 + 30) or any expression!
+        Calculate the number yourself and write ONLY the final number.
         Make sure the JSON is valid with no extra text, no trailing commas, and proper formatting.
         """
         
@@ -112,6 +127,15 @@ class RecommendationAgent(BaseAgent):
             # Convert to DayItinerary objects
             itinerary = []
             for day_data in itinerary_data:
+                # Calculate the actual total_cost from activities (in case AI used expressions)
+                activities_list = day_data.get("activities", [])
+                calculated_total = sum(
+                    float(act.get("price", 0)) for act in activities_list
+                ) * request.travelers
+                
+                # Override AI's total_cost with our calculation
+                day_data["total_cost"] = calculated_total
+                
                 activities = [Activity(
                     name=act["name"],
                     description=act["description"],
