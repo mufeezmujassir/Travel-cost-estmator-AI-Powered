@@ -2,11 +2,14 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { Plane, Brain, MapPin, DollarSign, User, LogOut } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import toast from 'react-hot-toast'
 
 const Header = ({ onAuthNavigate, onProfileNavigate, onTravelNavigate, currentView }) => {
   const { user, isAuthenticated, logout } = useAuth()
 
   const handleLogout = () => {
+    // Show logout confirmation toast
+    toast.success('Logged out successfully. See you next time!')
     logout()
     if (currentView === 'profile') {
       onTravelNavigate()
