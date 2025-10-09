@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, validator
 from typing import Optional, List
 import os
@@ -181,22 +181,10 @@ class Settings(BaseSettings):
         """Get Redis URL with proper formatting"""
         return self.redis_url
     
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-        validate_assignment = True
-        extra = "ignore"
-        
-        # Environment variable mapping
-        fields = {
-            'grok_api_key': {'env': 'GROK_API_KEY'},
-            'serp_api_key': {'env': 'SERP_API_KEY'},
-            'google_maps_api_key': {'env': 'GOOGLE_MAPS_API_KEY'},
-            'database_url': {'env': 'DATABASE_URL'},
-            'redis_url': {'env': 'REDIS_URL'},
-            'secret_key': {'env': 'SECRET_KEY'},
-            'environment': {'env': 'ENVIRONMENT'},
-            'debug': {'env': 'DEBUG'},
-            'log_level': {'env': 'LOG_LEVEL'},
-        }
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        validate_assignment=True,
+        extra="ignore"
+    )
