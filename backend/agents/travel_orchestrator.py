@@ -32,6 +32,7 @@ class TravelState(TypedDict):
     errors: List[str]
     completed_agents: List[str]
     price_trends: Dict[str, Any]  # Price calendar data
+    hotel_context: Dict[str, Any]  # Hotel contextual information (where/when/what)
 
 class TravelOrchestrator:
     """Main orchestrator for coordinating all travel planning agents"""
@@ -213,13 +214,20 @@ class TravelOrchestrator:
             agent = self.agents["hotel_search"]
             context = {
                 "emotional_intelligence": state["emotional_analysis"],
-                "flight_search_agent": {"data": {"flights": [flight.dict() for flight in state["flights"]]}}
+                "flight_search_agent": {"data": {"flights": [flight.dict() for flight in state["flights"]]}},
+                "include_hotel_context": state["request"].include_hotel_context
             }
             response = await agent.execute_with_timeout(state["request"], context)
             
             if response.success:
                 hotels_data = response.data.get("hotels", [])
                 state["hotels"] = [Hotel(**hotel) for hotel in hotels_data]
+                
+                # Store hotel context if available
+                if "hotel_context" in response.data:
+                    state["hotel_context"] = response.data["hotel_context"]
+                    print(f"✅ Hotel context retrieved for {state['request'].destination}")
+                
                 state["completed_agents"].append("hotel_search")
                 print("✅ Hotel Search Agent completed")
             else:
@@ -375,6 +383,7 @@ class TravelOrchestrator:
             recommendations=state["recommendations"],
             vibe_analysis=state["emotional_analysis"],
             price_trends=state.get("price_trends") if state.get("price_trends") else None,
+            hotel_context=state.get("hotel_context") if state.get("hotel_context") else None,
             generated_at=datetime.now()
         )
     

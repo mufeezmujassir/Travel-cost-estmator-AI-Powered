@@ -22,6 +22,7 @@ class TravelRequest(BaseModel):
     budget: Optional[float] = Field(None, description="Budget in USD", ge=0)
     vibe: VibeType = Field(..., description="Travel vibe preference")
     include_price_trends: bool = Field(True, description="Include price calendar analysis")
+    include_hotel_context: bool = Field(True, description="Include hotel contextual information (where/when/what)")
     
     @validator('start_date', 'return_date')
     def validate_dates(cls, v):
@@ -122,6 +123,7 @@ class TravelResponse(BaseModel):
     recommendations: List[str] = []
     vibe_analysis: Dict[str, Any] = {}
     price_trends: Optional[Dict[str, Any]] = None  # Price calendar data
+    hotel_context: Optional[Dict[str, Any]] = None  # Hotel contextual information (where/when/what)
     generated_at: datetime = Field(default_factory=datetime.now)
     
     class Config:

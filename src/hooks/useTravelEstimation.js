@@ -20,7 +20,8 @@ export const useTravelEstimation = () => {
       travelers: parseInt(formData.travelers, 10),
       budget: parseFloat(formData.budget) || null,  // Optional, send null if 0
       vibe: vibe.id.toLowerCase(),  // Send string like "adventure"
-      include_price_trends: options.includePriceTrends !== false  // Default to true
+      include_price_trends: options.includePriceTrends !== false,  // Default to true
+      include_hotel_context: options.includeHotelContext !== false  // Default to true
     };
 
     console.log('🚀 Sending travel estimation request:', payload);
