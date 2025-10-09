@@ -12,7 +12,8 @@ import {
   Share2,
   Star,
   Clock,
-  Navigation
+  Navigation,
+  Building
 } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 const Results = ({ results, error, onReset, formData, selectedVibe }) => {
