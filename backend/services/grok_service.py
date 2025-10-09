@@ -25,7 +25,7 @@ class GrokService:
         
         self.initialized = True
     
-    async def generate_response(self, prompt: str, system_message: Optional[str] = None) -> str:
+    async def generate_response(self, prompt: str, system_message: Optional[str] = None, force_json: bool = False) -> str:
         if not self.api_key:
             return self._get_mock_response(prompt)
         
@@ -36,6 +36,12 @@ class GrokService:
             }
             
             messages = []
+            # When forcing JSON, add system message that mentions "json"
+            if force_json and not system_message:
+                system_message = "You are a helpful assistant that responds in valid JSON format."
+            elif force_json and system_message and "json" not in system_message.lower():
+                system_message += " Always respond in valid JSON format."
+            
             if system_message:
                 messages.append({"role": "system", "content": system_message})
             messages.append({"role": "user", "content": prompt})
@@ -45,8 +51,11 @@ class GrokService:
                 "messages": messages,
                 "temperature": self.temperature,
                 "max_tokens": self.max_tokens,
-                "response_format": {"type": "json_object"}  # Add this to force JSON
             }
+            
+            # Only add response_format if force_json is True and "json" is in messages
+            if force_json:
+                payload["response_format"] = {"type": "json_object"}
             
             async with httpx.AsyncClient(timeout=self.settings.api_timeout) as client:
                 response = await client.post(
@@ -68,7 +77,47 @@ class GrokService:
 
 
     def _get_mock_response(self, prompt: str) -> str:
-        if "emotional intelligence" in prompt.lower():
+        if "itinerary" in prompt.lower():
+            return json.dumps({
+                "itinerary": [
+                    {
+                        "date": "2025-10-22",
+                        "activities": [
+                            {
+                                "name": "Morning City Tour",
+                                "description": "Explore the main attractions of the city",
+                                "location": "City Center",
+                                "time": "9:00 AM",
+                                "duration": "3 hours",
+                                "price": 25,
+                                "category": "sightseeing"
+                            },
+                            {
+                                "name": "Lunch at Local Restaurant",
+                                "description": "Traditional cuisine experience",
+                                "location": "Downtown",
+                                "time": "12:30 PM",
+                                "duration": "1.5 hours",
+                                "price": 30,
+                                "category": "dining"
+                            }
+                        ],
+                        "total_cost": 110
+                    }
+                ]
+            })
+        
+        elif "tips" in prompt.lower() and "enhance" in prompt.lower():
+            return json.dumps({
+                "tips": [
+                    "Research local customs and traditions",
+                    "Pack appropriately for the season",
+                    "Book popular experiences in advance",
+                    "Learn basic phrases in the local language"
+                ]
+            })
+        
+        elif "emotional intelligence" in prompt.lower():
             return json.dumps({
                 "activities": ["Sunset dinner cruise", "Couples spa treatment", "Romantic walk in gardens"],
                 "wellness_tips": ["Plan intimate moments", "Disconnect from technology", "Focus on each other"],
@@ -101,4 +150,6 @@ class GrokService:
 7. Plan some free time for spontaneous discoveries"""
         
         else:
-            return "This is a mock response. Please provide a valid Grok API key for real AI responses."
+            return json.dumps({
+                "message": "This is a mock response. Please provide a valid Grok API key for real AI responses."
+            })

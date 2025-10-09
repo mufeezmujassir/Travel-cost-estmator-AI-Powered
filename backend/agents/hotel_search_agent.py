@@ -78,11 +78,11 @@ class HotelSearchAgent(BaseAgent):
             Amenities: {', '.join(hotel.get('amenities', []))}
             
             Provide:
-            - vibe_score (0-1.0)
+            - vibe_score (0-1.0 as a decimal number)
             - reasoning (short explanation)
-            - vibe_enhancements (2-3 suggestions)
+            - vibe_enhancements (2-3 suggestions as an array)
             
-            Respond in JSON format:
+            Respond in valid JSON format:
             {{
                 "vibe_score": 0.9,
                 "reasoning": "explanation",
@@ -91,7 +91,7 @@ class HotelSearchAgent(BaseAgent):
             """
             
             try:
-                response = await self.grok_service.generate_response(prompt)
+                response = await self.grok_service.generate_response(prompt, force_json=True)
                 analysis = json.loads(response)
                 hotel["vibe_analysis"] = analysis
             except:
@@ -120,7 +120,9 @@ class HotelSearchAgent(BaseAgent):
                     description=hotel_data.get("description", ""),
                     amenities=hotel_data.get("amenities", []),
                     image_url=hotel_data.get("image_url"),
-                    distance_from_center=hotel_data.get("distance_from_center")
+                    distance_from_center=hotel_data.get("distance_from_center"),
+                    price_confidence=hotel_data.get("price_confidence", "high"),
+                    data_source=hotel_data.get("data_source")
                 )
                 processed_hotels.append(hotel)
             except Exception as e:

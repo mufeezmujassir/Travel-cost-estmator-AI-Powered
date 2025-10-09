@@ -210,10 +210,25 @@ const OverviewTab = ({ results, formData, selectedVibe }) => (
           <MapPin className="w-8 h-8 text-green-600" />
         </div>
         <h3 className="text-lg font-semibold text-gray-900 mb-2">Recommended Hotel</h3>
-        <p className="text-2xl font-bold text-green-600">
-          ${results?.hotels?.[0]?.price_per_night || 'N/A'}
+        <div className="flex items-center justify-center gap-2">
+          <p className="text-2xl font-bold text-green-600">
+            ${results?.hotels?.[0]?.price_per_night || 'N/A'}
+          </p>
+          {results?.hotels?.[0]?.price_confidence === 'estimated' && (
+            <span 
+              className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium"
+              title="Estimated price based on hotel category"
+            >
+              Est.
+            </span>
+          )}
+        </div>
+        <p className="text-sm text-gray-600">
+          per night
+          {results?.hotels?.[0]?.price_confidence === 'estimated' && (
+            <span className="text-amber-600"> (estimated)</span>
+          )}
         </p>
-        <p className="text-sm text-gray-600">per night</p>
       </div>
       
       <div className="card text-center">
@@ -277,49 +292,171 @@ const OverviewTab = ({ results, formData, selectedVibe }) => (
 )
 
 // Flights Tab Component
-const FlightsTab = ({ results }) => (
-  <div className="space-y-4">
-    {results?.flights?.map((flight, index) => (
-      <div key={index} className="card">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Plane className="w-6 h-6 text-blue-600" />
+const FlightsTab = ({ results }) => {
+  const priceTrends = results?.price_trends
+  const hasPriceTrends = priceTrends && priceTrends.status === 'success'
+  
+  return (
+    <div className="space-y-6">
+      {/* Price Calendar Section */}
+      {hasPriceTrends && (
+        <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+              <Calendar className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">{flight.airline}</h3>
-              <p className="text-sm text-gray-600">{flight.flight_number}</p>
+              <h3 className="text-lg font-bold text-gray-900">💡 Price Calendar - Find Cheaper Dates!</h3>
+              <p className="text-sm text-gray-600">Save money by being flexible with your travel dates</p>
             </div>
           </div>
-          <div className="text-right">
-            <p className="text-2xl font-bold text-gray-900">${flight.price}</p>
-            <p className="text-sm text-gray-600">per person</p>
+          
+          {/* Price Statistics */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white rounded-lg p-3 border border-gray-200">
+              <p className="text-xs text-gray-500 mb-1">Your Date</p>
+              <p className="text-xl font-bold text-blue-600">${priceTrends.target_price || 'N/A'}</p>
+            </div>
+            <div className="bg-white rounded-lg p-3 border border-green-200">
+              <p className="text-xs text-gray-500 mb-1">💚 Cheapest</p>
+              <p className="text-xl font-bold text-green-600">${priceTrends.statistics?.min_price || 'N/A'}</p>
+            </div>
+            <div className="bg-white rounded-lg p-3 border border-gray-200">
+              <p className="text-xs text-gray-500 mb-1">Average</p>
+              <p className="text-xl font-bold text-gray-600">${Math.round(priceTrends.statistics?.average_price || 0)}</p>
+            </div>
+            <div className="bg-white rounded-lg p-3 border border-red-200">
+              <p className="text-xs text-gray-500 mb-1">🔴 Most Expensive</p>
+              <p className="text-xl font-bold text-red-600">${priceTrends.statistics?.max_price || 'N/A'}</p>
+            </div>
           </div>
+          
+          {/* Recommendations */}
+          {priceTrends.recommendations && priceTrends.recommendations.length > 0 && (
+            <div className="bg-white rounded-lg p-4 mb-6 border border-blue-200">
+              <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <span className="text-xl">💡</span>
+                Smart Travel Tips
+              </h4>
+              <div className="space-y-2">
+                {priceTrends.recommendations.map((rec, idx) => (
+                  <div key={idx} className="flex items-start gap-2 text-sm">
+                    <span className="text-blue-500 mt-0.5">•</span>
+                    <p className="text-gray-700">{rec}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Price Grid */}
+          {priceTrends.price_grid && priceTrends.price_grid.length > 0 && (
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-4">📅 Prices by Date</h4>
+              <div className="overflow-x-auto">
+                <div className="grid grid-cols-1 gap-2">
+                  {priceTrends.price_grid.slice(0, 10).map((item, idx) => {
+                    const isTarget = item.date === priceTrends.target_date
+                    const bgColor = item.is_cheap ? 'bg-green-50 border-green-200' : 
+                                   item.is_expensive ? 'bg-red-50 border-red-200' : 
+                                   'bg-gray-50 border-gray-200'
+                    const emoji = item.is_cheap ? '💚' : item.is_expensive ? '🔴' : '💛'
+                    
+                    return (
+                      <div 
+                        key={idx} 
+                        className={`flex items-center justify-between p-3 rounded-lg border-2 ${bgColor} ${isTarget ? 'ring-2 ring-blue-500' : ''}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          {isTarget && <span className="text-blue-500 font-bold">→</span>}
+                          <div>
+                            <p className="font-semibold text-gray-900">{item.date}</p>
+                            <p className="text-xs text-gray-600">{item.day_of_week}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{emoji}</span>
+                            <p className="text-xl font-bold text-gray-900">${item.price}</p>
+                          </div>
+                          {item.savings !== 0 && (
+                            <p className={`text-xs ${item.savings > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {item.savings > 0 ? `Save $${Math.round(item.savings)}` : `+$${Math.abs(Math.round(item.savings))}`}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+              
+              {/* Legend */}
+              <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-center gap-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">💚</span>
+                  <span className="text-gray-600">Cheap</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">💛</span>
+                  <span className="text-gray-600">Moderate</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">🔴</span>
+                  <span className="text-gray-600">Expensive</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm font-medium text-gray-700">Departure</p>
-            <p className="text-lg font-semibold">{flight.departure_time}</p>
-            <p className="text-sm text-gray-600">{flight.departure_airport}</p>
+      )}
+      
+      {/* Flight Options */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-gray-900">Available Flights</h3>
+        {results?.flights?.map((flight, index) => (
+          <div key={index} className="card">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Plane className="w-6 h-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">{flight.airline}</h3>
+                  <p className="text-sm text-gray-600">{flight.flight_number}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-gray-900">${flight.price}</p>
+                <p className="text-sm text-gray-600">per person</p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm font-medium text-gray-700">Departure</p>
+                <p className="text-lg font-semibold">{flight.departure_time}</p>
+                <p className="text-sm text-gray-600">{flight.departure_airport}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-700">Arrival</p>
+                <p className="text-lg font-semibold">{flight.arrival_time}</p>
+                <p className="text-sm text-gray-600">{flight.arrival_airport}</p>
+              </div>
+            </div>
+            
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">Duration: {flight.duration}</span>
+                <span className="text-gray-600">Class: {flight.class_type || flight.class || 'Economy'}</span>
+              </div>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium text-gray-700">Arrival</p>
-            <p className="text-lg font-semibold">{flight.arrival_time}</p>
-            <p className="text-sm text-gray-600">{flight.arrival_airport}</p>
-          </div>
-        </div>
-        
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Duration: {flight.duration}</span>
-            <span className="text-gray-600">Class: {flight.class}</span>
-          </div>
-        </div>
+        ))}
       </div>
-    ))}
-  </div>
-)
+    </div>
+  )
+}
 
 // Hotels Tab Component
 const HotelsTab = ({ results }) => (
@@ -328,7 +465,7 @@ const HotelsTab = ({ results }) => (
       <div key={index} className="card">
         <div className="flex items-start space-x-4">
           <img
-            src={hotel.image || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=200&h=150&fit=crop'}
+            src={hotel.image_url || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=200&h=150&fit=crop'}
             alt={hotel.name}
             className="w-32 h-24 object-cover rounded-lg"
           />
@@ -339,8 +476,21 @@ const HotelsTab = ({ results }) => (
                 <p className="text-sm text-gray-600">{hotel.location}</p>
               </div>
               <div className="text-right">
-                <p className="text-xl font-bold text-gray-900">${hotel.price_per_night}</p>
+                <div className="flex items-center justify-end gap-2">
+                  <p className="text-xl font-bold text-gray-900">${hotel.price_per_night}</p>
+                  {hotel.price_confidence === 'estimated' && (
+                    <span 
+                      className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium"
+                      title="Estimated price based on hotel category"
+                    >
+                      Est.
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-gray-600">per night</p>
+                {hotel.price_confidence === 'estimated' && (
+                  <p className="text-xs text-amber-600 mt-1">Estimated price</p>
+                )}
               </div>
             </div>
             

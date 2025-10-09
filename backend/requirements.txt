@@ -4,6 +4,7 @@ langchain==0.0.350
 langgraph==0.0.20
 langchain-openai==0.0.2
 pydantic==2.5.0
+pydantic-settings==2.1.0
 python-dotenv==1.0.0
 httpx==0.25.2
 googlemaps==4.10.0

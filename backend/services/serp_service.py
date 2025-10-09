@@ -4,6 +4,7 @@ from typing import Dict, Any, List, Optional
 import json
 import re
 from .config import Settings
+from .airport_resolver import AirportResolver
 
 class SerpService:
     """Service for interacting with SERP API for flight and hotel data"""
@@ -16,6 +17,7 @@ class SerpService:
         self.country = settings.serp_country
         self.language = settings.serp_language
         self.initialized = False
+        self.airport_resolver = AirportResolver(self.api_key)
     
     async def initialize(self):
         if not self.api_key:
@@ -48,68 +50,25 @@ class SerpService:
                 print(f"SERP web search error: {response.status_code} - {response.text}")
                 return {"organic_results": []}
     
-    async def get_airport_code(self, city: str) -> str:
-        """Get IATA airport code for city"""
-        # If the user provided a 3-letter code, normalize and map metro codes -> primary airports
-        if isinstance(city, str) and len(city.strip()) == 3 and city.strip().isalpha():
-            code = city.strip().upper()
-            metro_to_primary = {
-                "NYC": "JFK",   # New York City -> JFK
-                "LON": "LHR",   # London -> Heathrow
-                "PAR": "CDG",   # Paris -> Charles de Gaulle
-                "TYO": "HND",   # Tokyo -> Haneda
-                "OSA": "KIX",   # Osaka -> Kansai
-                "SEL": "ICN",   # Seoul -> Incheon
-                "ROM": "FCO",   # Rome -> Fiumicino
-                "MIL": "MXP",   # Milan -> Malpensa
-                "WAS": "IAD",   # Washington -> Dulles
-                "CHI": "ORD",   # Chicago -> O'Hare
-                "SAO": "GRU",   # São Paulo -> Guarulhos
-                "BER": "BER",   # Berlin (already airport)
-                "CMB": "CMB",   # Colombo (Bandaranaike)
-            }
-            return metro_to_primary.get(code, code)
-
-        query = f"IATA airport code for {city}"
-        results = await self.web_search(query, num_results=5)
-
-        organic = results.get("organic_results", [])
-
-        # Try title and snippet for IATA codes
-        for result in organic:
-            text = f"{result.get('title','')} {result.get('snippet','')}"
-            match = re.search(r"\b([A-Z]{3})\b", text)
-            if match:
-                code = match.group(1)
-                if len(code) == 3 and code.isupper():
-                    return code
-
-        # Simple common-city fallback mappings to reduce UNKNOWN cases
-        common_map = {
-            "new york": "JFK",
-            "nyc": "JFK",
-            "los angeles": "LAX",
-            "san francisco": "SFO",
-            "chicago": "ORD",
-            "london": "LHR",
-            "paris": "CDG",
-            "tokyo": "HND",
-            "dubai": "DXB",
-            "colombo": "CMB",
-            "singapore": "SIN",
-            "sydney": "SYD",
-        }
-        key = city.strip().lower()
-        if key in common_map:
-            return common_map[key]
-
-        return "UNKNOWN"
+    async def get_airport_code(self, city: str, country: Optional[str] = None) -> str:
+        """
+        Get IATA airport code for city using intelligent resolution
+        
+        This now uses the AirportResolver which:
+        - Covers 100+ major cities automatically
+        - Searches for nearest airport intelligently
+        - Detects country and uses main airport as fallback
+        - Caches results for performance
+        """
+        return await self.airport_resolver.get_airport_code(city, country)
     
     async def search_flights(self, origin: str, destination: str, departure_date: str, return_date: str, travelers: int = 1) -> List[Dict[str, Any]]:
         """Search for flights using SerpAPI google_flights with IATA codes."""
         if not self.api_key:
             return []
 
+        print(f"🛫 Searching flights: {origin} ({origin}) → {destination} ({destination})")
+        
         params = {
             "engine": "google_flights",
             "departure_id": origin,
@@ -134,8 +93,12 @@ class SerpService:
                                 data[k] = v
                     processed = self._process_flight_results(data)
                     flights = processed.get("flights", [])
-                    # Fallback: if SERP returns nothing, provide a synthetic option so UI isn't empty
-                    if not flights:
+                    
+                    if flights:
+                        print(f"✅ Found {len(flights)} real flights from SERP API")
+                    else:
+                        print(f"⚠️ No flights found in SERP response - using fallback data")
+                        # Fallback: if SERP returns nothing, provide a synthetic option so UI isn't empty
                         flights = [{
                             "airline": "SampleAir",
                             "flight_number": "SA1001",
@@ -262,77 +225,132 @@ class SerpService:
             "processed": True,
         }
     
+    def _coerce_price_enhanced(self, value: Any, hotel_name: str = "") -> float:
+        """Enhanced price coercion with better error handling"""
+        try:
+            if value is None:
+                return self._estimate_price_from_hotel_name(hotel_name)
+            if isinstance(value, (int, float)):
+                return float(value)
+            if isinstance(value, dict):
+                for k in [
+                    "extracted_lowest",
+                    "extracted_before_taxes_fees",
+                    "extracted_price",
+                    "lowest",
+                    "before_taxes_fees",
+                    "per_night",
+                    "rate",
+                    "value",
+                    "amount",
+                    "rate_per_night",
+                    "extracted_total",
+                    "total_rate",
+                    "nightly_rate"
+                ]:
+                    if k in value and value[k] is not None:
+                        try:
+                            return float(value[k])
+                        except Exception:
+                            continue
+                return self._estimate_price_from_hotel_name(hotel_name)
+            s = str(value)
+            digits = ''.join(ch for ch in s if (ch.isdigit() or ch in ['.', ',']))
+            return float(digits.replace(',', '')) if digits else self._estimate_price_from_hotel_name(hotel_name)
+        except Exception:
+            return self._estimate_price_from_hotel_name(hotel_name)
+    
+    def _estimate_price_from_hotel_name(self, hotel_name: str) -> float:
+        """Estimate hotel price based on name patterns"""
+        name_lower = hotel_name.lower()
+        
+        # Luxury indicators
+        if any(word in name_lower for word in ["hilton", "marriott", "hyatt", "ritz", "carlton", "four seasons", "intercontinental", "waldorf"]):
+            return 250.0
+        
+        # Mid-range indicators
+        if any(word in name_lower for word in ["holiday inn", "comfort", "quality", "best western", "courtyard", "fairfield"]):
+            return 120.0
+        
+        # Budget indicators
+        if any(word in name_lower for word in ["motel", "inn", "lodge", "budget", "super 8", "days inn"]):
+            return 80.0
+        
+        # Resort indicators
+        if any(word in name_lower for word in ["resort", "spa", "grand"]):
+            return 200.0
+        
+        # Default mid-range price
+        return 150.0
+    
     def _process_hotel_results(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Enhanced hotel data processing with better price handling"""
         hotels: List[Dict[str, Any]] = []
         
-        def _coerce_price(value: Any) -> float:
-            try:
-                if value is None:
-                    return 0.0
-                if isinstance(value, (int, float)):
-                    return float(value)
-                if isinstance(value, dict):
-                    for k in [
-                        "extracted_lowest",
-                        "extracted_before_taxes_fees",
-                        "extracted_price",
-                        "lowest",
-                        "before_taxes_fees",
-                        "per_night",
-                        "rate",
-                        "value",
-                        "amount",
-                        "rate_per_night",
-                        "extracted_total",
-                        "total_rate",
-                    ]:
-                        if k in value and value[k] is not None:
-                            try:
-                                return float(value[k])
-                            except Exception:
-                                continue
-                    return 0.0
-                s = str(value)
-                digits = ''.join(ch for ch in s if (ch.isdigit() or ch in ['.', ',']))
-                return float(digits.replace(',', '')) if digits else 0.0
-            except Exception:
-                return 0.0
+        # Process multiple data sources
+        data_sources = [
+            ("properties", data.get("properties", [])),
+            ("ads", data.get("ads", [])),
+            ("organic_results", data.get("organic_results", [])),
+            ("hotels", data.get("hotels", [])),
+        ]
         
-        # Process properties if present
-        properties = data.get("properties", [])
-        for prop in properties:
-            hotels.append({
-                "name": prop.get("name", "Hotel"),
-                "location": prop.get("address", ""),
-                "price_per_night": _coerce_price(
-                    prop.get("rate_per_night")
-                    or (prop.get("total_rate") if isinstance(prop.get("total_rate"), dict) else None)
-                    or prop.get("extracted_price")
-                    or prop.get("price")
-                ),
-                "rating": float(prop.get("overall_rating", 0) or 0),
-                "description": prop.get("description", ""),
-                "amenities": prop.get("amenities", []) or [],
-                "image_url": (prop.get("images") or [{}])[0].get("thumbnail") if prop.get("images") else None,
-                "distance_from_center": None,
-            })
+        for source_name, items in data_sources:
+            if not isinstance(items, list):
+                continue
+                
+            for item in items:
+                try:
+                    hotel_name = item.get("name", "Unknown Hotel")
+                    
+                    # Enhanced price extraction
+                    price = self._coerce_price_enhanced(
+                        item.get("rate_per_night") or 
+                        item.get("price") or 
+                        item.get("extracted_price") or
+                        item.get("total_rate") or
+                        item.get("nightly_rate"),
+                        hotel_name
+                    )
+                    
+                    # Skip hotels with unrealistic prices
+                    if price > 1000 or price < 10:
+                        price = self._estimate_price_from_hotel_name(hotel_name)
+                    
+                    hotel_data = {
+                        "name": hotel_name,
+                        "location": item.get("address") or item.get("location", ""),
+                        "price_per_night": price,
+                        "currency": "USD",
+                        "rating": float(item.get("overall_rating", 0) or 0),
+                        "description": item.get("description", ""),
+                        "amenities": item.get("amenities", []) or [],
+                        "image_url": item.get("thumbnail") or item.get("image"),
+                        "distance_from_center": None,
+                        "data_source": source_name,  # Track where data came from
+                        "price_confidence": "high" if price != self._estimate_price_from_hotel_name(hotel_name) else "estimated"
+                    }
+                    
+                    hotels.append(hotel_data)
+                    
+                except Exception as e:
+                    print(f"Error processing hotel item from {source_name}: {e}")
+                    continue
         
-        # Process ads
-        ads = data.get("ads", [])
-        for ad in ads:
-            hotels.append({
-                "name": ad.get("name", "Hotel"),
-                "location": ad.get("source", ""),
-                "price_per_night": _coerce_price(ad.get("extracted_price") or ad.get("price")),
-                "rating": float(ad.get("overall_rating", 0) or 0),
-                "description": ad.get("name", ""),
-                "amenities": ad.get("amenities", []) or [],
-                "image_url": ad.get("thumbnail"),
-                "distance_from_center": None,
-            })
+        # Remove duplicates and sort by price
+        unique_hotels = []
+        seen_names = set()
+        
+        for hotel in hotels:
+            if hotel["name"].lower() not in seen_names:
+                unique_hotels.append(hotel)
+                seen_names.add(hotel["name"].lower())
+        
+        # Sort by price (lowest first)
+        unique_hotels.sort(key=lambda x: x["price_per_night"])
         
         return {
-            "hotels": hotels,
+            "hotels": unique_hotels[:10],  # Return top 10
             "search_info": data.get("search_information", {}),
             "processed": True,
         }

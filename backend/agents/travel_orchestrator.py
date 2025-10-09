@@ -31,6 +31,7 @@ class TravelState(TypedDict):
     season_recommendation: SeasonRecommendation
     errors: List[str]
     completed_agents: List[str]
+    price_trends: Dict[str, Any]  # Price calendar data
 
 class TravelOrchestrator:
     """Main orchestrator for coordinating all travel planning agents"""
@@ -128,7 +129,8 @@ class TravelOrchestrator:
                 recommendation=""
             ),
             errors=[],
-            completed_agents=[]
+            completed_agents=[],
+            price_trends={}  # Initialize price trends
         )
         
         # Run the workflow
@@ -174,12 +176,22 @@ class TravelOrchestrator:
         
         try:
             agent = self.agents["flight_search"]
-            context = {"emotional_intelligence": state["emotional_analysis"]}
+            context = {
+                "emotional_intelligence": state["emotional_analysis"],
+                "include_price_trends": state["request"].include_price_trends
+            }
             response = await agent.execute_with_timeout(state["request"], context)
             
             if response.success:
                 flights_data = response.data.get("flights", [])
                 state["flights"] = [Flight(**flight) for flight in flights_data]
+                
+                # Store price trends if available
+                if "price_trends" in response.data:
+                    if "price_trends" not in state:
+                        state["price_trends"] = {}
+                    state["price_trends"] = response.data["price_trends"]
+                
                 state["completed_agents"].append("flight_search")
                 print("✅ Flight Search Agent completed")
             else:
@@ -362,6 +374,7 @@ class TravelOrchestrator:
             season_recommendation=state["season_recommendation"],
             recommendations=state["recommendations"],
             vibe_analysis=state["emotional_analysis"],
+            price_trends=state.get("price_trends") if state.get("price_trends") else None,
             generated_at=datetime.now()
         )
     

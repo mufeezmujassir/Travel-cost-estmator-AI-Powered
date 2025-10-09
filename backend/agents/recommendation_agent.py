@@ -65,14 +65,18 @@ class RecommendationAgent(BaseAgent):
         - location (specific place in {request.destination})
         - time (e.g., 9:00 AM)
         - duration (e.g., 2 hours)
-        - price (estimate in USD per person)
+        - price (estimate in USD per person as a NUMBER)
         - category (e.g., sightseeing, dining, activity)
         
         Make the activities match the {request.vibe.value} vibe.
         Include travel time between locations where appropriate.
-        Calculate total_cost for each day as sum of activity prices * travelers.
         
-        Respond ONLY in JSON format as an object with 'itinerary' key:
+        IMPORTANT: 
+        - All prices must be NUMBERS (integers or decimals), NOT expressions
+        - total_cost must be a calculated NUMBER (sum of all activity prices multiplied by {request.travelers} travelers)
+        - Do NOT use arithmetic expressions like (0 + 20 + 150) * 2, calculate the actual number
+        
+        Respond ONLY in valid JSON format as an object with 'itinerary' key:
         {{
             "itinerary": [
                 {{
@@ -84,21 +88,19 @@ class RecommendationAgent(BaseAgent):
                             "location": "Specific location",
                             "time": "HH:MM AM/PM",
                             "duration": "X hours",
-                            "price": X,
+                            "price": 50,
                             "category": "category"
-                        }},
-                        ...
+                        }}
                     ],
-                    "total_cost": X
-                }},
-                ...
+                    "total_cost": 100
+                }}
             ]
         }}
         Make sure the JSON is valid with no extra text, no trailing commas, and proper formatting.
         """
         
         try:
-            response = await self.grok_service.generate_response(prompt)
+            response = await self.grok_service.generate_response(prompt, force_json=True)
             text = response.strip()
             # Improved cleaning: Find the JSON object
             start = text.find('{')
@@ -256,12 +258,15 @@ class RecommendationAgent(BaseAgent):
         prompt = f"""
         Provide 4-6 practical tips to enhance a {request.vibe.value} travel experience in {request.destination}.
         
-        Respond as a simple list in JSON format:
-        ["tip1", "tip2", ...]
+        Respond in valid JSON format with a "tips" key containing an array:
+        {{
+            "tips": ["tip1", "tip2", "tip3"]
+        }}
         """
         
         try:
-            response = await self.grok_service.generate_response(prompt)
-            return json.loads(response)
+            response = await self.grok_service.generate_response(prompt, force_json=True)
+            data = json.loads(response)
+            return data.get("tips", ["Research local customs", "Pack appropriately", "Book in advance"])
         except:
             return ["Research local customs", "Pack appropriately", "Book in advance"]
