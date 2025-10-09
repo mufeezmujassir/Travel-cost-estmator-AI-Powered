@@ -6,7 +6,6 @@ from .base_agent import BaseAgent
 from models.travel_models import TravelRequest, Hotel, VibeType
 from services.serp_service import SerpService
 from services.grok_service import GrokService
-from services.hotel_context_service import HotelContextService
 
 class HotelSearchAgent(BaseAgent):
     """Agent responsible for finding and analyzing hotel options"""
@@ -15,7 +14,6 @@ class HotelSearchAgent(BaseAgent):
         super().__init__("Hotel Search Agent", settings)
         self.serp_service = None
         self.grok_service = None
-        self.hotel_context_service = None
     
     async def initialize(self):
         """Initialize the hotel search agent"""
@@ -24,7 +22,6 @@ class HotelSearchAgent(BaseAgent):
         await self.serp_service.initialize()
         self.grok_service = GrokService(self.settings)
         await self.grok_service.initialize()
-        self.hotel_context_service = HotelContextService(self.serp_service, self.grok_service)
     
     async def process(self, request: TravelRequest, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Search for hotel options that match the vibe"""
@@ -51,11 +48,6 @@ class HotelSearchAgent(BaseAgent):
                     "hotel_criteria": self._get_vibe_hotel_criteria(request.vibe)
                 }
             }
-            
-            # Get hotel context if requested
-            if context and context.get("include_hotel_context", False):
-                hotel_context = await self.get_hotel_context(request, hotels_data)
-                result["hotel_context"] = hotel_context
             
             return result
             
@@ -200,25 +192,3 @@ class HotelSearchAgent(BaseAgent):
             "location": "City center",
             "atmosphere": "Comfortable and convenient"
         })
-    
-    async def get_hotel_context(self, request: TravelRequest, hotels_data: List[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """
-        Get comprehensive hotel context including:
-        - Where to stay (top areas/neighborhoods)
-        - When to visit (seasonal pricing and trends)
-        - What you'll pay (price breakdown by star rating)
-        """
-        try:
-            context = await self.hotel_context_service.get_hotel_context(
-                destination=request.destination,
-                check_in_date=request.start_date,
-                check_out_date=request.return_date,
-                hotels_data=hotels_data
-            )
-            return context
-        except Exception as e:
-            print(f"⚠️ Error getting hotel context: {e}")
-            return {
-                "status": "error",
-                "message": str(e)
-            }

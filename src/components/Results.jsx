@@ -238,7 +238,7 @@ const OverviewTab = ({ results, formData, selectedVibe }) => (
         </div>
         <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Estimated</h3>
         <p className="text-2xl font-bold text-purple-600">
-          ${results?.total_cost || 'N/A'}
+          ${(results?.total_cost || 0).toFixed(2)}
         </p>
         <p className="text-sm text-gray-600">for {formData.travelers} traveler(s)</p>
       </div>
@@ -461,143 +461,8 @@ const FlightsTab = ({ results }) => {
 
 // Hotels Tab Component
 const HotelsTab = ({ results }) => {
-  const hotelContext = results?.hotel_context
-  const hasHotelContext = hotelContext && hotelContext.status === 'success'
-
   return (
     <div className="space-y-6">
-      {/* Hotel Context Section */}
-      {hasHotelContext && (
-        <div className="space-y-4">
-          {/* Where to Stay Section */}
-          {hotelContext.where_to_stay?.top_areas?.length > 0 && (
-            <div className="card bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200">
-              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                <MapPin className="w-5 h-5 mr-2 text-purple-600" />
-                Where to Stay
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {hotelContext.where_to_stay.top_areas.map((area, idx) => (
-                  <div key={idx} className="bg-white p-4 rounded-lg shadow-sm border border-purple-100">
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-semibold text-gray-900">{idx + 1}. {area.name}</h4>
-                      <div className="flex items-center bg-green-100 px-2 py-1 rounded">
-                        <Star className="w-3 h-3 text-green-600 fill-current mr-1" />
-                        <span className="text-xs font-medium text-green-700">{area.score}</span>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-2">{area.description}</p>
-                    <div className="flex flex-wrap gap-1">
-                      {area.known_for?.map((item, i) => (
-                        <span key={i} className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
-                          {item}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* When to Visit Section */}
-          {hotelContext.when_to_visit?.current_month && (
-            <div className="card bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200">
-              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                <Calendar className="w-5 h-5 mr-2 text-blue-600" />
-                When to Visit
-              </h3>
-              
-              {/* Current Month Info */}
-              <div className="bg-white p-4 rounded-lg shadow-sm border border-blue-100 mb-3">
-                <h4 className="font-semibold text-gray-900 mb-2">
-                  {hotelContext.when_to_visit.current_month.month} (Your Selected Month)
-                </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div>
-                    <p className="text-xs text-gray-500">Temperature</p>
-                    <p className="text-sm font-medium text-gray-900">{hotelContext.when_to_visit.current_month.temp_range}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Weather</p>
-                    <p className="text-sm font-medium text-gray-900">{hotelContext.when_to_visit.current_month.weather}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Crowds</p>
-                    <p className="text-sm font-medium text-gray-900">{hotelContext.when_to_visit.current_month.crowd_level}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Hotel Prices</p>
-                    <p className="text-sm font-medium text-gray-900">{hotelContext.when_to_visit.current_month.price_level}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Best Value Months */}
-              {hotelContext.when_to_visit.best_value_months?.length > 0 && (
-                <div className="bg-green-50 p-3 rounded-lg border border-green-200 mb-2">
-                  <p className="text-sm font-medium text-green-800 mb-1">💰 Best Value Months:</p>
-                  <p className="text-sm text-green-700">
-                    {hotelContext.when_to_visit.best_value_months.map(m => m.month).join(', ')}
-                  </p>
-                </div>
-              )}
-
-              {/* Peak Season Months */}
-              {hotelContext.when_to_visit.peak_season_months?.length > 0 && (
-                <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
-                  <p className="text-sm font-medium text-amber-800 mb-1">⚠️ Peak Season:</p>
-                  <p className="text-sm text-amber-700">
-                    {hotelContext.when_to_visit.peak_season_months.map(m => m.month).join(', ')} - Book early!
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* What You'll Pay Section */}
-          {hotelContext.what_youll_pay?.by_star_rating?.length > 0 && (
-            <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200">
-              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                <DollarSign className="w-5 h-5 mr-2 text-green-600" />
-                What You'll Pay
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {hotelContext.what_youll_pay.by_star_rating.map((rating, idx) => (
-                  <div key={idx} className="bg-white p-4 rounded-lg shadow-sm border border-green-100">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center">
-                        {[...Array(rating.stars)].map((_, i) => (
-                          <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
-                        ))}
-                        <span className="ml-2 text-sm font-medium text-gray-700">{rating.stars}-star hotels</span>
-                      </div>
-                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">{rating.label}</span>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900">LKR{Math.round(rating.avg_price / 1000)}K</p>
-                    <p className="text-xs text-gray-500">avg per night</p>
-                    <p className="text-xs text-gray-600 mt-1">Usually {rating.range}</p>
-                    <p className="text-xs text-gray-500 mt-1">{rating.count}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Tips Section */}
-          {hotelContext.tips?.length > 0 && (
-            <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
-              <h4 className="font-semibold text-indigo-900 mb-2">💡 Smart Tips</h4>
-              <ul className="space-y-1">
-                {hotelContext.tips.map((tip, idx) => (
-                  <li key={idx} className="text-sm text-indigo-800">{tip}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Hotels List */}
       <div className="space-y-4">
         <h3 className="text-lg font-bold text-gray-900 flex items-center">
@@ -716,37 +581,37 @@ const CostsTab = ({ results, formData }) => (
       <div className="space-y-4">
         <div className="flex justify-between items-center py-2 border-b border-gray-200">
           <span className="text-gray-700">Flights ({formData.travelers} travelers)</span>
-          <span className="font-semibold">${results?.cost_breakdown?.flights || 0}</span>
+          <span className="font-semibold">${(results?.cost_breakdown?.flights || 0).toFixed(2)}</span>
         </div>
         
         <div className="flex justify-between items-center py-2 border-b border-gray-200">
           <span className="text-gray-700">Accommodation</span>
-          <span className="font-semibold">${results?.cost_breakdown?.accommodation || 0}</span>
+          <span className="font-semibold">${(results?.cost_breakdown?.accommodation || 0).toFixed(2)}</span>
         </div>
         
         <div className="flex justify-between items-center py-2 border-b border-gray-200">
           <span className="text-gray-700">Transportation</span>
-          <span className="font-semibold">${results?.cost_breakdown?.transportation || 0}</span>
+          <span className="font-semibold">${(results?.cost_breakdown?.transportation || 0).toFixed(2)}</span>
         </div>
         
         <div className="flex justify-between items-center py-2 border-b border-gray-200">
           <span className="text-gray-700">Activities & Experiences</span>
-          <span className="font-semibold">${results?.cost_breakdown?.activities || 0}</span>
+          <span className="font-semibold">${(results?.cost_breakdown?.activities || 0).toFixed(2)}</span>
         </div>
         
         <div className="flex justify-between items-center py-2 border-b border-gray-200">
           <span className="text-gray-700">Food & Dining</span>
-          <span className="font-semibold">${results?.cost_breakdown?.food || 0}</span>
+          <span className="font-semibold">${(results?.cost_breakdown?.food || 0).toFixed(2)}</span>
         </div>
         
         <div className="flex justify-between items-center py-2 border-b border-gray-200">
           <span className="text-gray-700">Miscellaneous</span>
-          <span className="font-semibold">${results?.cost_breakdown?.miscellaneous || 0}</span>
+          <span className="font-semibold">${(results?.cost_breakdown?.miscellaneous || 0).toFixed(2)}</span>
         </div>
         
         <div className="flex justify-between items-center py-3 bg-primary-50 rounded-lg px-4">
           <span className="text-lg font-semibold text-gray-900">Total Estimated Cost</span>
-          <span className="text-2xl font-bold text-primary-600">${results?.total_cost || 0}</span>
+          <span className="text-2xl font-bold text-primary-600">${(results?.total_cost || 0).toFixed(2)}</span>
         </div>
       </div>
     </div>
