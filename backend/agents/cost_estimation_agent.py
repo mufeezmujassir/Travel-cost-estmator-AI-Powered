@@ -61,13 +61,16 @@ class CostEstimationAgent(BaseAgent):
         """Calculate detailed cost breakdown"""
         trip_duration = self.calculate_trip_duration(request.start_date, request.return_date)
         
-        # Flight costs
+        # Flight costs - use the cheapest flight
         flights_cost = 0
         if "flight_search_agent" in agent_data:
             flights_data = agent_data["flight_search_agent"].get("data", {})
             flights = flights_data.get("flights", [])
             if flights:
-                flights_cost = flights[0].get("price", 0) * request.travelers
+                # Find the cheapest flight by price
+                cheapest_flight = min(flights, key=lambda x: x.get("price", float('inf')))
+                # Price is already total for all travelers (multiplied in FlightSearchAgent)
+                flights_cost = cheapest_flight.get("price", 0)
         
         # Accommodation costs
         accommodation_cost = 0
@@ -76,7 +79,10 @@ class CostEstimationAgent(BaseAgent):
             hotels = hotels_data.get("hotels", [])
             if hotels:
                 price_per_night = hotels[0].get("price_per_night", 0)
-                accommodation_cost = price_per_night * trip_duration * request.travelers
+                # Calculate rooms needed - assume 2 travelers share 1 room
+                # 1 traveler = 1 room, 2 travelers = 1 room, 3 travelers = 2 rooms, etc.
+                rooms_needed = (request.travelers + 1) // 2
+                accommodation_cost = price_per_night * trip_duration * rooms_needed
         
         # Transportation costs
         transportation_cost = 0

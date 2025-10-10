@@ -141,20 +141,23 @@ class FlightSearchAgent(BaseAgent):
         return processed_flights
     
     def _select_best_flights(self, flights: List[Flight], request: TravelRequest) -> List[Flight]:
-        """Select the best flight options based on criteria"""
+        """Select the best flight options - prioritize price with minor stop penalty"""
         if not flights:
             return []
         
-        # Sort by price and other factors
-        def flight_score(flight: Flight) -> float:
-            price_score = 1.0 / (flight.price + 1)
+        # Sort by price with small penalty for stops
+        def flight_sort_key(flight: Flight) -> float:
+            # Base price
+            price = flight.price
             
-            stops_score = 1.0 / (flight.stops + 1)
+            # Add small penalty for each stop ($50 per stop)
+            # This way a 1-stop flight that's $200 cheaper will still rank higher
+            stops_penalty = flight.stops * 50
             
-            return price_score * 0.7 + stops_score * 0.3
+            return price + stops_penalty
         
-        # Sort flights by score
-        sorted_flights = sorted(flights, key=flight_score, reverse=True)
+        # Sort flights by adjusted price (cheapest first)
+        sorted_flights = sorted(flights, key=flight_sort_key)
         
-        # Return top 3 options
-        return sorted_flights[:3]
+        # Return top 10 options (increased from 3 to give users more choices)
+        return sorted_flights[:10]

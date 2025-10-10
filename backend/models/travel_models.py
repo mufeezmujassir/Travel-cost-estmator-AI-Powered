@@ -122,6 +122,9 @@ class TravelResponse(BaseModel):
     recommendations: List[str] = []
     vibe_analysis: Dict[str, Any] = {}
     price_trends: Optional[Dict[str, Any]] = None  # Price calendar data
+    transportation: Optional[Dict[str, Any]] = None  # Transportation options and details
+    is_domestic_travel: bool = False  # Whether this is domestic travel
+    travel_distance_km: float = 0.0  # Distance between origin and destination
     generated_at: datetime = Field(default_factory=datetime.now)
     
     class Config:

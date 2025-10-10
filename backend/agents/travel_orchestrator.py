@@ -511,6 +511,9 @@ class TravelOrchestrator:
             recommendations=state["recommendations"],
             vibe_analysis=state["emotional_analysis"],
             price_trends=state.get("price_trends") if state.get("price_trends") else None,
+            transportation=state.get("transportation"),  # Include transportation data
+            is_domestic_travel=state.get("is_domestic_travel", False),  # Include domestic travel flag
+            travel_distance_km=state.get("travel_distance_km", 0.0),  # Include distance
             generated_at=datetime.now()
         )
     

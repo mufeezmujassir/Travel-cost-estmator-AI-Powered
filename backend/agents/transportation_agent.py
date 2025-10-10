@@ -28,17 +28,55 @@ class TransportationAgent(BaseAgent):
         try:
             self.validate_request(request)
             
+            # Check if this is domestic travel (no flights)
+            has_flights = False
+            if context and context.get("flight_search_agent"):
+                flights = context["flight_search_agent"].get("data", {}).get("flights", [])
+                has_flights = len(flights) > 0
+            
             # Get transportation options
             transportation_options = await self._get_transportation_options(request, context)
             
-            # Calculate costs
-            cost_breakdown = await self._calculate_transportation_costs(transportation_options, request)
+            # Calculate costs (pass has_flights to exclude airport transfers for domestic)
+            cost_breakdown = await self._calculate_transportation_costs(transportation_options, request, has_flights)
             
             # Get route optimization
             route_optimization = await self._optimize_routes(request, context)
             
+            # Format inter-city options for UI display
+            inter_city_options = []
+            if transportation_options.get("inter_city_transportation"):
+                for option in transportation_options["inter_city_transportation"]:
+                    # Format duration
+                    if "duration_hours" in option:
+                        hours = int(option["duration_hours"])
+                        minutes = int((option["duration_hours"] - hours) * 60)
+                        duration_str = f"{hours}h {minutes}m" if hours > 0 else f"{minutes}m"
+                    else:
+                        duration_str = "Varies"
+                    
+                    inter_city_options.append({
+                        "type": option.get("type"),
+                        "cost": option.get("cost_per_trip", option.get("cost", 0)),
+                        "duration": duration_str,
+                        "description": option.get("description", ""),
+                        "notes": option.get("notes")
+                    })
+            
+            # Format local transportation for UI
+            local_transportation = {}
+            if transportation_options.get("local_transportation"):
+                local_options = [opt["type"] for opt in transportation_options["local_transportation"]]
+                daily_cost = transportation_options["local_transportation"][0].get("cost_per_day", 0) if transportation_options["local_transportation"] else 0
+                local_transportation = {
+                    "options": local_options,
+                    "daily_cost": daily_cost
+                }
+            
             return {
                 "transportation_options": transportation_options,
+                "inter_city_options": inter_city_options,  # Formatted for UI
+                "local_transportation": local_transportation,  # Formatted for UI
                 "cost_breakdown": cost_breakdown,
                 "route_optimization": route_optimization,
                 "total_transportation_cost": cost_breakdown.get("total", 0)
@@ -241,12 +279,12 @@ class TransportationAgent(BaseAgent):
             }
         ]
     
-    async def _calculate_transportation_costs(self, options: Dict[str, Any], request: TravelRequest) -> Dict[str, Any]:
+    async def _calculate_transportation_costs(self, options: Dict[str, Any], request: TravelRequest, has_flights: bool = True) -> Dict[str, Any]:
         trip_duration = self.calculate_trip_duration(request.start_date, request.return_date)
         
-        # Airport transfers (arrival and departure)
+        # Airport transfers (arrival and departure) - ONLY for international travel with flights
         airport_transfer_cost = 0
-        if options.get("airport_transfer"):
+        if has_flights and options.get("airport_transfer"):
             taxi_cost = options["airport_transfer"][0]["cost_per_trip"]
             airport_transfer_cost = taxi_cost * 2 * request.travelers  # Round trip
         
@@ -256,11 +294,16 @@ class TransportationAgent(BaseAgent):
             public_transport_cost = options["local_transportation"][0]["cost_per_day"]
             local_transport_cost = public_transport_cost * trip_duration * request.travelers
         
-        # Inter-city transportation (if needed)
+        # Inter-city transportation - using cheapest option (usually train or bus)
         inter_city_cost = 0
-        if options.get("inter_city_transportation"):
-            train_cost = options["inter_city_transportation"][0]["cost_per_trip"]
-            inter_city_cost = train_cost * 2 * request.travelers
+        if options.get("inter_city_transportation") and len(options["inter_city_transportation"]) > 0:
+            # Use the cheapest option (first one is usually cheapest after sorting)
+            cheapest_option = min(options["inter_city_transportation"], 
+                                 key=lambda x: x.get("cost_per_trip", float('inf')))
+            cost_per_trip = cheapest_option.get("cost_per_trip", 0)
+            
+            # Round trip cost (going there and coming back) for all travelers
+            inter_city_cost = cost_per_trip * 2 * request.travelers
         
         total_cost = airport_transfer_cost + local_transport_cost + inter_city_cost
         
