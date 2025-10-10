@@ -155,6 +155,65 @@ class TransportationAgent(BaseAgent):
         ]
     
     async def _get_inter_city_transportation_options(self, request: TravelRequest) -> List[Dict[str, Any]]:
+        """
+        Get inter-city transportation options.
+        For domestic travel, provide comprehensive ground transport options.
+        """
+        # Try to get distance if available from context
+        try:
+            if self.gmaps_client:
+                result = self.gmaps_client.distance_matrix(
+                    origins=[request.origin],
+                    destinations=[request.destination],
+                    mode="driving",
+                    units="metric"
+                )
+                
+                if result['rows'][0]['elements'][0]['status'] == 'OK':
+                    element = result['rows'][0]['elements'][0]
+                    distance_km = element['distance']['value'] / 1000
+                    duration_hours = element['duration']['value'] / 3600
+                    
+                    # Calculate costs based on actual distance
+                    train_cost = max(20, min(100, 15 + (distance_km * 0.15)))  # $15 base + $0.15/km
+                    bus_cost = max(10, min(60, 10 + (distance_km * 0.10)))     # $10 base + $0.10/km
+                    car_cost = max(30, min(150, 25 + (distance_km * 0.20)))    # $25 base + $0.20/km
+                    taxi_cost = max(40, min(300, 35 + (distance_km * 0.50)))   # $35 base + $0.50/km
+                    
+                    return [
+                        {
+                            "type": "train",
+                            "cost_per_trip": round(train_cost, 2),
+                            "duration_hours": round(duration_hours * 1.1, 1),  # Trains slightly slower
+                            "distance_km": round(distance_km, 1),
+                            "description": f"Train service covering {distance_km:.0f} km"
+                        },
+                        {
+                            "type": "bus",
+                            "cost_per_trip": round(bus_cost, 2),
+                            "duration_hours": round(duration_hours * 1.2, 1),  # Buses slower than cars
+                            "distance_km": round(distance_km, 1),
+                            "description": f"Inter-city bus covering {distance_km:.0f} km"
+                        },
+                        {
+                            "type": "car_rental",
+                            "cost_per_trip": round(car_cost, 2),
+                            "duration_hours": round(duration_hours, 1),
+                            "distance_km": round(distance_km, 1),
+                            "description": f"Self-drive car rental ({distance_km:.0f} km)"
+                        },
+                        {
+                            "type": "private_car",
+                            "cost_per_trip": round(taxi_cost, 2),
+                            "duration_hours": round(duration_hours, 1),
+                            "distance_km": round(distance_km, 1),
+                            "description": f"Private car/taxi service ({distance_km:.0f} km)"
+                        }
+                    ]
+        except Exception as e:
+            print(f"Could not calculate distance-based costs: {e}")
+        
+        # Fallback to default options
         return [
             {
                 "type": "train",
@@ -173,6 +232,12 @@ class TransportationAgent(BaseAgent):
                 "cost_per_trip": 60,
                 "duration_hours": 3,
                 "description": "Car rental for day trips"
+            },
+            {
+                "type": "private_car",
+                "cost_per_trip": 80,
+                "duration_hours": 3,
+                "description": "Private car/taxi service"
             }
         ]
     

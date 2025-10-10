@@ -71,9 +71,41 @@ class AirportResolver:
         "uae": "DXB",
     }
     
+    # City to country mapping for faster lookups
+    CITY_TO_COUNTRY = {
+        # Sri Lanka
+        "galle": "Sri Lanka", "kandy": "Sri Lanka", "negombo": "Sri Lanka",
+        "colombo": "Sri Lanka", "trincomalee": "Sri Lanka", "batticaloa": "Sri Lanka",
+        "matara": "Sri Lanka", "nuwara eliya": "Sri Lanka", "ella": "Sri Lanka",
+        "jaffna": "Sri Lanka", "anuradhapura": "Sri Lanka", "polonnaruwa": "Sri Lanka",
+        
+        # India
+        "delhi": "India", "mumbai": "India", "bangalore": "India", "chennai": "India",
+        "kolkata": "India", "hyderabad": "India", "pune": "India", "ahmedabad": "India",
+        "jaipur": "India", "lucknow": "India", "goa": "India", "kochi": "India",
+        
+        # Japan
+        "tokyo": "Japan", "osaka": "Japan", "kyoto": "Japan", "hiroshima": "Japan",
+        "nagoya": "Japan", "sapporo": "Japan", "fukuoka": "Japan", "yokohama": "Japan",
+        
+        # USA
+        "new york": "United States", "los angeles": "United States", "chicago": "United States",
+        "houston": "United States", "san francisco": "United States", "miami": "United States",
+        "boston": "United States", "seattle": "United States", "las vegas": "United States",
+        
+        # UK
+        "london": "United Kingdom", "manchester": "United Kingdom", "birmingham": "United Kingdom",
+        
+        # China
+        "beijing": "China", "shanghai": "China", "guangzhou": "China", "shenzhen": "China",
+        
+        # Add more as needed...
+    }
+    
     def __init__(self, serp_api_key: Optional[str] = None):
         self.serp_api_key = serp_api_key
         self._cache: Dict[str, str] = {}  # Cache resolved codes
+        self._country_cache: Dict[str, str] = {}  # Cache country resolutions
     
     async def get_airport_code(self, city: str, country: Optional[str] = None) -> str:
         """
@@ -248,4 +280,64 @@ class AirportResolver:
             "USA", "EUR", "USD", "GBP", "WWW", "COM", "ORG", "NET",
         }
         return code not in excluded and len(code) == 3 and code.isalpha()
+    
+    async def get_country_for_city(self, city: str) -> Optional[str]:
+        """
+        Detect which country a city belongs to
+        
+        Args:
+            city: City name
+            
+        Returns:
+            Country name or None if not found
+        """
+        city_key = city.strip().lower()
+        
+        # Check cache first
+        if city_key in self._country_cache:
+            return self._country_cache[city_key]
+        
+        # Check static mapping
+        if city_key in self.CITY_TO_COUNTRY:
+            country = self.CITY_TO_COUNTRY[city_key]
+            self._country_cache[city_key] = country
+            return country
+        
+        # Try to detect using geocoding API
+        country = await self._detect_country_from_api(city)
+        if country:
+            self._country_cache[city_key] = country
+            return country
+        
+        return None
+    
+    async def _detect_country_from_api(self, city: str) -> Optional[str]:
+        """Use Nominatim (OpenStreetMap) to detect country"""
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                # Use Nominatim geocoding API (free, no key required)
+                response = await client.get(
+                    "https://nominatim.openstreetmap.org/search",
+                    params={
+                        "q": city,
+                        "format": "json",
+                        "limit": 1
+                    },
+                    headers={"User-Agent": "TravelEstimator/1.0"}
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    if data and len(data) > 0:
+                        display_name = data[0].get("display_name", "")
+                        # Country is usually the last part
+                        parts = display_name.split(", ")
+                        if parts:
+                            country = parts[-1].strip()
+                            print(f"🌍 Detected country for '{city}': {country}")
+                            return country
+        except Exception as e:
+            print(f"⚠️ Error detecting country for '{city}': {e}")
+        
+        return None
 
