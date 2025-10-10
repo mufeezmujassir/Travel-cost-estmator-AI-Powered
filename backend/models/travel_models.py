@@ -21,6 +21,7 @@ class TravelRequest(BaseModel):
     travelers: int = Field(..., description="Number of travelers", ge=1, le=10)
     budget: Optional[float] = Field(None, description="Budget in USD", ge=0)
     vibe: VibeType = Field(..., description="Travel vibe preference")
+    include_price_trends: bool = Field(True, description="Include price calendar analysis")
     
     @validator('start_date', 'return_date')
     def validate_dates(cls, v):
@@ -67,6 +68,8 @@ class Hotel(BaseModel):
     distance_from_center: Optional[float] = None
     check_in: Optional[str] = None
     check_out: Optional[str] = None
+    price_confidence: Optional[str] = "high"  # "high" for actual prices, "estimated" for fallback
+    data_source: Optional[str] = None  # Track where the data came from
 
 class Activity(BaseModel):
     """Activity information model"""
@@ -118,6 +121,7 @@ class TravelResponse(BaseModel):
     season_recommendation: SeasonRecommendation
     recommendations: List[str] = []
     vibe_analysis: Dict[str, Any] = {}
+    price_trends: Optional[Dict[str, Any]] = None  # Price calendar data
     generated_at: datetime = Field(default_factory=datetime.now)
     
     class Config:

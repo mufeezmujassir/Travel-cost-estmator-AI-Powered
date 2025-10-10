@@ -37,21 +37,21 @@ class CostEstimationAgent(BaseAgent):
             optimization_suggestions = await self._get_cost_optimization_suggestions(request, cost_breakdown)
             
             # Calculate total cost
-            total_cost = sum([
+            total_cost = round(sum([
                 cost_breakdown.flights,
                 cost_breakdown.accommodation,
                 cost_breakdown.transportation,
                 cost_breakdown.activities,
                 cost_breakdown.food,
                 cost_breakdown.miscellaneous
-            ])
+            ]), 2)
             
             return {
                 "cost_breakdown": cost_breakdown.dict(),
                 "total_cost": total_cost,
                 "budget_analysis": budget_analysis,
                 "optimization_suggestions": optimization_suggestions,
-                "cost_per_person": total_cost / request.travelers if request.travelers > 0 else 0
+                "cost_per_person": round(total_cost / request.travelers, 2) if request.travelers > 0 else 0
             }
             
         except Exception as e:
@@ -81,7 +81,7 @@ class CostEstimationAgent(BaseAgent):
         # Transportation costs
         transportation_cost = 0
         if "transportation_agent" in agent_data:
-            transport_data = agent_data["transportation_agent"].get("data", {})
+            transport_data = agent_data["transportation_agent"]
             transportation_cost = transport_data.get("total_transportation_cost", 0)
         
         # Activities costs (estimated based on vibe and destination)
@@ -94,12 +94,12 @@ class CostEstimationAgent(BaseAgent):
         miscellaneous_cost = await self._estimate_miscellaneous_cost(request, trip_duration)
         
         return CostBreakdown(
-            flights=flights_cost,
-            accommodation=accommodation_cost,
-            transportation=transportation_cost,
-            activities=activities_cost,
-            food=food_cost,
-            miscellaneous=miscellaneous_cost
+            flights=round(flights_cost, 2),
+            accommodation=round(accommodation_cost, 2),
+            transportation=round(transportation_cost, 2),
+            activities=round(activities_cost, 2),
+            food=round(food_cost, 2),
+            miscellaneous=round(miscellaneous_cost, 2)
         )
     
     async def _estimate_activities_cost(self, request: TravelRequest, trip_duration: int) -> float:

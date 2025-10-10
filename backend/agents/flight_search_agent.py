@@ -3,9 +3,11 @@ import httpx
 from typing import Dict, Any,List
 import json
 import re
+from datetime import datetime
 from .base_agent import BaseAgent
 from models.travel_models import TravelRequest, Flight
 from services.serp_service import SerpService
+from services.price_calendar import PriceCalendar
 
 class FlightSearchAgent(BaseAgent):
     """Agent responsible for finding and analyzing flight options"""
@@ -13,15 +15,17 @@ class FlightSearchAgent(BaseAgent):
     def __init__(self, settings):
         super().__init__("Flight Search Agent", settings)
         self.serp_service = None
+        self.price_calendar = None
     
     async def initialize(self):
         """Initialize the flight search agent"""
         await super().initialize()
         self.serp_service = SerpService(self.settings)
         await self.serp_service.initialize()
+        self.price_calendar = PriceCalendar(self.serp_service)
     
     async def process(self, request: TravelRequest, context: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Search for flight options"""
+        """Search for flight options with optional price trend analysis"""
         try:
             self.validate_request(request)
             
@@ -34,7 +38,15 @@ class FlightSearchAgent(BaseAgent):
             # Select best options
             best_flights = self._select_best_flights(processed_flights, request)
             
-            return {
+            # Check if price trend analysis is requested
+            include_price_trends = context and context.get("include_price_trends", False)
+            price_analysis = None
+            
+            if include_price_trends:
+                print("📊 Generating price calendar analysis...")
+                price_analysis = await self.get_price_trends(request)
+            
+            result = {
                 "flights": [flight.dict() for flight in best_flights],
                 "total_options_found": len(processed_flights),
                 "search_criteria": {
@@ -46,7 +58,42 @@ class FlightSearchAgent(BaseAgent):
                 }
             }
             
+            if price_analysis:
+                result["price_trends"] = price_analysis
+            
+            return result
+            
         except Exception as e:
+            return {"error": str(e)}
+    
+    async def get_price_trends(self, request: TravelRequest) -> Dict[str, Any]:
+        """Get price trend analysis for flexible dates"""
+        try:
+            # Get airport codes
+            departure_id = await self.serp_service.get_airport_code(request.origin)
+            arrival_id = await self.serp_service.get_airport_code(request.destination)
+            
+            if departure_id == "UNKNOWN" or arrival_id == "UNKNOWN":
+                return {"error": "Could not resolve airport codes"}
+            
+            # Calculate trip duration
+            start = datetime.strptime(request.start_date, "%Y-%m-%d")
+            end = datetime.strptime(request.return_date, "%Y-%m-%d")
+            duration = (end - start).days
+            
+            # Get price trends
+            trends = await self.price_calendar.get_price_trends(
+                origin=departure_id,
+                destination=arrival_id,
+                target_date=request.start_date,
+                duration_days=duration,
+                search_window_days=7  # Check ±7 days
+            )
+            
+            return trends
+            
+        except Exception as e:
+            print(f"Error getting price trends: {e}")
             return {"error": str(e)}
     
     async def _search_flights(self, request: TravelRequest) -> List[Dict[str, Any]]:

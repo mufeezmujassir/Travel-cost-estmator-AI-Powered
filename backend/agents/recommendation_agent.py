@@ -65,14 +65,20 @@ class RecommendationAgent(BaseAgent):
         - location (specific place in {request.destination})
         - time (e.g., 9:00 AM)
         - duration (e.g., 2 hours)
-        - price (estimate in USD per person)
+        - price (estimate in USD per person as a NUMBER)
         - category (e.g., sightseeing, dining, activity)
         
         Make the activities match the {request.vibe.value} vibe.
         Include travel time between locations where appropriate.
-        Calculate total_cost for each day as sum of activity prices * travelers.
         
-        Respond ONLY in JSON format as an object with 'itinerary' key:
+        CRITICAL RULES FOR JSON GENERATION:
+        1. ALL numeric values MUST be actual numbers (integers or decimals)
+        2. NEVER use mathematical expressions or formulas (like "2 * 100" or "(0 + 50 + 200)")
+        3. Calculate all totals BEFORE generating JSON
+        4. The "total_cost" field must contain the FINAL calculated number only
+        5. Example: If activities cost 50 + 100 + 30 for 2 travelers, total_cost should be 360, NOT "2 * (50 + 100 + 30)"
+        
+        Respond ONLY in valid JSON format as an object with 'itinerary' key:
         {{
             "itinerary": [
                 {{
@@ -84,21 +90,32 @@ class RecommendationAgent(BaseAgent):
                             "location": "Specific location",
                             "time": "HH:MM AM/PM",
                             "duration": "X hours",
-                            "price": X,
+                            "price": 50,
                             "category": "category"
                         }},
-                        ...
+                        {{
+                            "name": "Another Activity",
+                            "description": "Description",
+                            "location": "Location",
+                            "time": "2:00 PM",
+                            "duration": "1 hour",
+                            "price": 30,
+                            "category": "dining"
+                        }}
                     ],
-                    "total_cost": X
-                }},
-                ...
+                    "total_cost": 160
+                }}
             ]
         }}
+        
+        IMPORTANT: In the example above, total_cost = (50 + 30) * 2 travelers = 160
+        You MUST write "total_cost": 160, NOT "total_cost": 2 * (50 + 30) or any expression!
+        Calculate the number yourself and write ONLY the final number.
         Make sure the JSON is valid with no extra text, no trailing commas, and proper formatting.
         """
         
         try:
-            response = await self.grok_service.generate_response(prompt)
+            response = await self.grok_service.generate_response(prompt, force_json=True)
             text = response.strip()
             # Improved cleaning: Find the JSON object
             start = text.find('{')
@@ -110,6 +127,15 @@ class RecommendationAgent(BaseAgent):
             # Convert to DayItinerary objects
             itinerary = []
             for day_data in itinerary_data:
+                # Calculate the actual total_cost from activities (in case AI used expressions)
+                activities_list = day_data.get("activities", [])
+                calculated_total = sum(
+                    float(act.get("price", 0)) for act in activities_list
+                ) * request.travelers
+                
+                # Override AI's total_cost with our calculation
+                day_data["total_cost"] = calculated_total
+                
                 activities = [Activity(
                     name=act["name"],
                     description=act["description"],
@@ -256,12 +282,15 @@ class RecommendationAgent(BaseAgent):
         prompt = f"""
         Provide 4-6 practical tips to enhance a {request.vibe.value} travel experience in {request.destination}.
         
-        Respond as a simple list in JSON format:
-        ["tip1", "tip2", ...]
+        Respond in valid JSON format with a "tips" key containing an array:
+        {{
+            "tips": ["tip1", "tip2", "tip3"]
+        }}
         """
         
         try:
-            response = await self.grok_service.generate_response(prompt)
-            return json.loads(response)
+            response = await self.grok_service.generate_response(prompt, force_json=True)
+            data = json.loads(response)
+            return data.get("tips", ["Research local customs", "Pack appropriately", "Book in advance"])
         except:
             return ["Research local customs", "Pack appropriately", "Book in advance"]

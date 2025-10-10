@@ -94,16 +94,16 @@ class EmotionalIntelligenceAgent(BaseAgent):
         2. 3-4 emotional wellness tips for this type of travel
         3. 2-3 suggestions to enhance the {request.vibe.value} experience
         
-        Respond in JSON format:
+        Respond in valid JSON format:
         {{
-            "activities": ["activity1", "activity2", ...],
-            "wellness_tips": ["tip1", "tip2", ...],
-            "enhancement_suggestions": ["suggestion1", "suggestion2", ...]
+            "activities": ["activity1", "activity2"],
+            "wellness_tips": ["tip1", "tip2"],
+            "enhancement_suggestions": ["suggestion1", "suggestion2"]
         }}
         """
         
         try:
-            response = await self.grok_service.generate_response(prompt)
+            response = await self.grok_service.generate_response(prompt, force_json=True)
             return json.loads(response)
         except:
             # Fallback recommendations
