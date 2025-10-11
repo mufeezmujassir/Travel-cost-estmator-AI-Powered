@@ -22,6 +22,7 @@ import {
   Info
 } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
+import ImprovedCostsTab from './ImprovedCostsTab'
 const Results = ({ results, error, onReset, formData, selectedVibe }) => {
   const [activeTab, setActiveTab] = useState('overview')
 
@@ -159,7 +160,7 @@ const Results = ({ results, error, onReset, formData, selectedVibe }) => {
             exit={{ opacity: 0, x: 20 }}
             transition={{ duration: 0.3 }}
           >
-            <TransportationTab results={results} formData={formData} />
+            <TransportationTab results={results} formData={formData} travelDistance={results?.travel_distance_km || 0} />
           </motion.div>
         )}
         
@@ -207,7 +208,7 @@ const Results = ({ results, error, onReset, formData, selectedVibe }) => {
             exit={{ opacity: 0, x: 20 }}
             transition={{ duration: 0.3 }}
           >
-            <CostsTab results={results} formData={formData} />
+            <ImprovedCostsTab results={results} formData={formData} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -383,11 +384,10 @@ const OverviewTab = ({ results, formData, selectedVibe }) => {
 }
 
 // Transportation Tab Component (for Domestic Travel)
-const TransportationTab = ({ results, formData }) => {
+const TransportationTab = ({ results, formData, travelDistance = 0 }) => {
   const transportation = results?.transportation
   const interCityOptions = transportation?.inter_city_options || []
   const localTransportation = transportation?.local_transportation || {}
-  const travelDistance = results?.travel_distance_km || 0
 
   return (
     <div className="space-y-6">
@@ -398,8 +398,12 @@ const TransportationTab = ({ results, formData }) => {
           <h3 className="text-lg font-bold text-gray-900">About Your Domestic Journey</h3>
         </div>
         <p className="text-gray-700 mb-3">
-          Since this is a domestic trip covering approximately {Math.round(travelDistance)} km, 
+          Since this is a domestic trip covering approximately {travelDistance > 0 ? Math.round(travelDistance) : '...'} km, 
           we've focused on ground transportation options that are more practical, cost-effective, and environmentally friendly.
+        </p>
+        <p className="text-sm text-gray-600 italic mb-3">
+          💡 Prices shown are <strong>one-way per trip</strong>. For round-trip, multiply by 2. 
+          Total cost for {formData?.travelers || 1} traveler{(formData?.travelers || 1) > 1 ? 's' : ''}.
         </p>
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg">
@@ -448,6 +452,20 @@ const TransportationTab = ({ results, formData }) => {
               }
             }
 
+            // Helper function to format duration from hours to readable string
+            const formatDuration = (durationHours) => {
+              if (!durationHours) return 'Varies'
+              const hours = Math.floor(durationHours)
+              const minutes = Math.round((durationHours - hours) * 60)
+              if (hours > 0 && minutes > 0) {
+                return `${hours}h ${minutes}m`
+              } else if (hours > 0) {
+                return `${hours}h`
+              } else {
+                return `${minutes}m`
+              }
+            }
+
             return (
               <div key={index} className="card hover:shadow-lg transition-shadow">
                 <div className="flex items-center justify-between mb-4">
@@ -461,7 +479,7 @@ const TransportationTab = ({ results, formData }) => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-3xl font-bold text-gray-900">${option.cost || 'N/A'}</p>
+                    <p className="text-3xl font-bold text-gray-900">${option.cost_per_trip || option.cost || 'N/A'}</p>
                     <p className="text-sm text-gray-600">
                       {formData.travelers > 1 ? `for ${formData.travelers} travelers` : 'per person'}
                     </p>
@@ -473,14 +491,18 @@ const TransportationTab = ({ results, formData }) => {
                     <Clock className="w-4 h-4 text-gray-500" />
                     <div>
                       <p className="text-xs text-gray-500">Duration</p>
-                      <p className="font-semibold text-gray-900">{option.duration || 'Varies'}</p>
+                      <p className="font-semibold text-gray-900">
+                        {option.duration_str || formatDuration(option.duration_hours)}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Navigation className="w-4 h-4 text-gray-500" />
                     <div>
                       <p className="text-xs text-gray-500">Distance</p>
-                      <p className="font-semibold text-gray-900">{Math.round(travelDistance)} km</p>
+                      <p className="font-semibold text-gray-900">
+                        {option.distance_km ? `${Math.round(option.distance_km)} km` : `${Math.round(travelDistance)} km`}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -919,15 +941,36 @@ const CostsTab = ({ results, formData }) => {
               <span className="font-semibold">${(results?.cost_breakdown?.flights || 0).toFixed(2)}</span>
             </div>
           ) : (
-            <div className="flex justify-between items-center py-2 border-b border-gray-200">
-              <div className="flex items-center gap-2">
-                <Navigation className="w-4 h-4 text-green-600" />
-                <span className="text-gray-700">Inter-City Transportation ({formData.travelers} travelers)</span>
-              </div>
-              <span className="font-semibold text-green-600">
-                ${(results?.cost_breakdown?.transportation || 0).toFixed(2)}
-              </span>
-            </div>
+            <>
+              {/* Breakdown for Inter-City Transportation: Outbound + Return */}
+              {(() => {
+                const totalInterCity = results?.cost_breakdown?.transportation || 0
+                const oneWayCost = totalInterCity / 2
+                
+                return (
+                  <>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                      <div className="flex items-center gap-2">
+                        <Navigation className="w-4 h-4 text-green-600" />
+                        <span className="text-gray-700">Inter-City (Outbound - {formData.travelers} travelers)</span>
+                      </div>
+                      <span className="font-semibold text-green-600">
+                        ${oneWayCost.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                      <div className="flex items-center gap-2">
+                        <Navigation className="w-4 h-4 text-green-600" />
+                        <span className="text-gray-700">Inter-City (Return - {formData.travelers} travelers)</span>
+                      </div>
+                      <span className="font-semibold text-green-600">
+                        ${oneWayCost.toFixed(2)}
+                      </span>
+                    </div>
+                  </>
+                )
+              })()}
+            </>
           )}
           
           <div className="flex justify-between items-center py-2 border-b border-gray-200">

@@ -198,11 +198,19 @@ class TravelOrchestrator:
             
             # Case 1: Same airport code (e.g., Galle and Colombo both = CMB)
             if origin_airport == dest_airport and origin_airport != "UNKNOWN":
+                # Calculate actual distance even if same airport
+                distance = await self.distance_calculator.calculate_distance(
+                    request.origin,
+                    request.destination
+                )
+                
                 state["skip_flight_search"] = True
                 state["is_domestic_travel"] = True
-                state["travel_distance_km"] = 0.0
+                state["travel_distance_km"] = distance if distance else 0.0
                 print(f"✅ Same airport detected ({origin_airport}) - Skipping flight search")
                 print(f"   This is domestic ground travel within the same region")
+                if distance:
+                    print(f"   Distance: {distance:.1f} km")
                 return state
             
             # Case 2: Different airports - check distance and country

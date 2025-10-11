@@ -141,7 +141,23 @@ class SerpService:
                 response = await client.get(self.base_url + ".json", params=params)
                 if response.status_code == 200:
                     data = response.json()
-                    print("Raw SERP hotel data:", json.dumps(data, indent=2))  # Log raw data for debugging
+                    # Debug: Show structure of first hotel to understand SERP format
+                    properties = data.get("properties", [])
+                    if properties and len(properties) > 0:
+                        print("\n🔍 DEBUG: First hotel structure from SERP API:")
+                        first_hotel = properties[0]
+                        print(f"   Name: {first_hotel.get('name', 'N/A')}")
+                        print(f"   Available fields: {list(first_hotel.keys())}")
+                        
+                        # Show all price-related fields
+                        price_fields = ['rate_per_night', 'price', 'extracted_price', 'total_rate', 'nightly_rate', 'check_in_check_out']
+                        print(f"   Price-related fields:")
+                        for field in price_fields:
+                            value = first_hotel.get(field)
+                            if value is not None:
+                                print(f"     • {field}: {value} (type: {type(value).__name__})")
+                        print()
+                    
                     processed = self._process_hotel_results(data)
                     return processed.get("hotels", [])
                 else:
@@ -303,19 +319,42 @@ class SerpService:
                 try:
                     hotel_name = item.get("name", "Unknown Hotel")
                     
-                    # Enhanced price extraction
-                    price = self._coerce_price_enhanced(
-                        item.get("rate_per_night") or 
-                        item.get("price") or 
-                        item.get("extracted_price") or
-                        item.get("total_rate") or
+                    # IMPROVED: Extract price from all possible SERP API structures
+                    price = None
+                    price_sources = [
+                        # Direct price fields
+                        item.get("rate_per_night"),
+                        item.get("price"),
+                        item.get("extracted_price"),
+                        item.get("total_rate"),
                         item.get("nightly_rate"),
-                        hotel_name
-                    )
+                        # Nested in rate_per_night dict
+                        item.get("rate_per_night", {}).get("extracted_lowest") if isinstance(item.get("rate_per_night"), dict) else None,
+                        item.get("rate_per_night", {}).get("lowest") if isinstance(item.get("rate_per_night"), dict) else None,
+                        # Nested in price dict
+                        item.get("price", {}).get("extracted_lowest") if isinstance(item.get("price"), dict) else None,
+                        item.get("price", {}).get("lowest") if isinstance(item.get("price"), dict) else None,
+                        # Check_in/Check_out specific
+                        item.get("check_in_check_out", {}).get("price") if isinstance(item.get("check_in_check_out"), dict) else None,
+                    ]
                     
-                    # Skip hotels with unrealistic prices
-                    if price > 1000 or price < 10:
+                    # Try each price source
+                    for price_source in price_sources:
+                        if price_source is not None:
+                            extracted_price = self._coerce_price_enhanced(price_source, hotel_name)
+                            # Accept price if it's realistic (between $10 and $2000 per night)
+                            if 10 <= extracted_price <= 2000:
+                                price = extracted_price
+                                break
+                    
+                    # If no valid price found, use estimate as last resort
+                    if price is None or price == 0:
                         price = self._estimate_price_from_hotel_name(hotel_name)
+                        price_confidence = "estimated"
+                        print(f"   ⚠️ Using estimated price for '{hotel_name}': ${price}/night")
+                    else:
+                        price_confidence = "high"
+                        print(f"   ✅ Real price for '{hotel_name}': ${price}/night from SERP API")
                     
                     hotel_data = {
                         "name": hotel_name,
@@ -328,7 +367,7 @@ class SerpService:
                         "image_url": item.get("thumbnail") or item.get("image"),
                         "distance_from_center": None,
                         "data_source": source_name,  # Track where data came from
-                        "price_confidence": "high" if price != self._estimate_price_from_hotel_name(hotel_name) else "estimated"
+                        "price_confidence": price_confidence
                     }
                     
                     hotels.append(hotel_data)
@@ -346,8 +385,12 @@ class SerpService:
                 unique_hotels.append(hotel)
                 seen_names.add(hotel["name"].lower())
         
-        # Sort by price (lowest first)
-        unique_hotels.sort(key=lambda x: x["price_per_night"])
+        # Sort by rating and price (prefer high-confidence pricing)
+        def hotel_sort_key(hotel):
+            confidence_bonus = 0 if hotel["price_confidence"] == "high" else 1000
+            return hotel["price_per_night"] + confidence_bonus
+        
+        unique_hotels.sort(key=hotel_sort_key)
         
         return {
             "hotels": unique_hotels[:10],  # Return top 10

@@ -120,6 +120,8 @@ class FlightSearchAgent(BaseAgent):
         
         for flight_data in flights_data:
             try:
+                # IMPORTANT: SERP API returns TOTAL price for all travelers when adults=N is specified
+                # So we should NOT multiply by travelers here - the price is already the total
                 flight = Flight(
                     airline=flight_data.get("airline", "Unknown"),
                     flight_number=flight_data.get("flight_number", "N/A"),
@@ -129,7 +131,7 @@ class FlightSearchAgent(BaseAgent):
                     arrival_airport=flight_data.get("arrival_airport", "N/A"),
                     duration=flight_data.get("duration", "N/A"),
                     class_type=flight_data.get("class_type", "Economy"),
-                    price=flight_data.get("price", 0.0) * request.travelers,
+                    price=flight_data.get("price", 0.0),  # Already total price from SERP
                     stops=flight_data.get("stops", 0),
                     aircraft=flight_data.get("aircraft")
                 )
