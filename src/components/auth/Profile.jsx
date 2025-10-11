@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { User, Mail, Calendar, Edit, Save, X, Trash2, Shield, AlertTriangle } from 'lucide-react';
+import { User, Mail, Calendar, Edit, Save, X, Trash2, Shield, AlertTriangle, CreditCard, ArrowRight } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+import UsageDashboard from '../subscription/UsageDashboard';
 
 const Profile = ({ onBack }) => {
   const { user, updateProfile, deleteAccount, logout } = useAuth();
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [activeSection, setActiveSection] = useState('profile'); // 'profile' or 'subscription'
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -116,42 +120,69 @@ const Profile = ({ onBack }) => {
             Back
           </button>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Profile Settings
+            Account Settings
           </h1>
-          <p className="text-gray-600 mt-2">Manage your account information and preferences</p>
+          <p className="text-gray-600 mt-2">Manage your profile and subscription</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl p-6 border border-white/60">
-              <div className="text-center mb-6">
-                <div className="relative inline-block">
-                  <div className="w-24 h-24 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg mx-auto mb-4">
-                    <span className="text-white text-2xl font-bold">
-                      {getInitials(user.name)}
-                    </span>
+        {/* Section Tabs */}
+        <div className="flex justify-center space-x-4 mb-8">
+          <button
+            onClick={() => setActiveSection('profile')}
+            className={`px-6 py-3 rounded-xl font-semibold transition-all ${
+              activeSection === 'profile'
+                ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
+                : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <User className="w-4 h-4 inline mr-2" />
+            Profile
+          </button>
+          <button
+            onClick={() => setActiveSection('subscription')}
+            className={`px-6 py-3 rounded-xl font-semibold transition-all ${
+              activeSection === 'subscription'
+                ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
+                : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <CreditCard className="w-4 h-4 inline mr-2" />
+            Subscription
+          </button>
+        </div>
+
+        {activeSection === 'profile' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Sidebar */}
+            <div className="lg:col-span-1">
+              <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl p-6 border border-white/60">
+                <div className="text-center mb-6">
+                  <div className="relative inline-block">
+                    <div className="w-24 h-24 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg mx-auto mb-4">
+                      <span className="text-white text-2xl font-bold">
+                        {getInitials(user.name)}
+                      </span>
+                    </div>
+                    <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full border-4 border-white flex items-center justify-center">
+                      <div className="w-3 h-3 bg-white rounded-full"></div>
+                    </div>
                   </div>
-                  <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full border-4 border-white flex items-center justify-center">
-                    <div className="w-3 h-3 bg-white rounded-full"></div>
-                  </div>
+                  <h2 className="text-xl font-semibold text-gray-900">{user.name}</h2>
+                  <p className="text-gray-500 text-sm">{user.email}</p>
                 </div>
-                <h2 className="text-xl font-semibold text-gray-900">{user.name}</h2>
-                <p className="text-gray-500 text-sm">{user.email}</p>
+
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="w-full flex items-center justify-center px-4 py-3 text-gray-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-600 rounded-xl transition-all duration-200 group border border-blue-200"
+                >
+                  <Edit className="w-5 h-5 mr-3 text-blue-600 group-hover:text-blue-700" />
+                  Edit Profile
+                </button>
               </div>
-
-              <button
-                onClick={() => setIsEditing(true)}
-                className="w-full flex items-center justify-center px-4 py-3 text-gray-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-600 rounded-xl transition-all duration-200 group border border-blue-200"
-              >
-                <Edit className="w-5 h-5 mr-3 text-blue-600 group-hover:text-blue-700" />
-                Edit Profile
-              </button>
             </div>
-          </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-2">
+            {/* Main Content */}
+            <div className="lg:col-span-2">
             <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl p-8 border border-white/60">
               {!isEditing ? (
                 // View Mode
@@ -277,8 +308,14 @@ const Profile = ({ onBack }) => {
                 </form>
               )}
             </div>
+            </div>
           </div>
-        </div>
+        ) : (
+          /* Subscription Section */
+          <div className="max-w-4xl mx-auto">
+            <UsageDashboard />
+          </div>
+        )}
       </div>
 
       {/* Enhanced Delete Confirmation Modal */}

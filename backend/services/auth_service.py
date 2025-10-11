@@ -2,7 +2,10 @@ from models.user import users_collection
 from utils.security import verify_password, get_password_hash, verify_token
 from schemas.user_schema import UserResponse
 from bson import ObjectId
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Depends
+from fastapi.security import OAuth2PasswordBearer
+import os
+from datetime import datetime
 
 class AuthService:
     
@@ -103,8 +106,11 @@ class AuthService:
             )
         return {"message": "User deleted successfully"}
 
+# OAuth2 scheme
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+
 # Dependency to get current user
-async def get_current_user(token: str):
+async def get_current_user(token: str = Depends(oauth2_scheme)):
     email = verify_token(token)
     if email is None:
         raise HTTPException(
@@ -121,9 +127,15 @@ async def get_current_user(token: str):
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    # Get subscription data
+    subscription_data = user.get("subscription", {})
+    
     return UserResponse(
         id=str(user["_id"]),
         name=user["name"],
         email=user["email"],
-        created_at=user["created_at"]
+        created_at=user["created_at"],
+        subscription_tier=subscription_data.get("tier", "free"),
+        subscription_status=subscription_data.get("status", "active"),
+        subscription_expiry=subscription_data.get("expires_at")
     )

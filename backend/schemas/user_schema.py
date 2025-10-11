@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import datetime
 
@@ -20,6 +20,19 @@ class UserResponse(BaseModel):
     name: str
     email: EmailStr
     created_at: datetime
+    subscription_tier: Optional[str] = Field(default="free", description="User's subscription tier")
+    subscription_status: Optional[str] = Field(default="active", description="User's subscription status")
+    subscription_expiry: Optional[datetime] = Field(None, description="When subscription expires")
+    
+    @property
+    def is_premium(self) -> bool:
+        """Check if user has premium subscription"""
+        return self.subscription_tier and self.subscription_tier != "free"
+    
+    @property
+    def can_generate_trip(self) -> bool:
+        """Check if user can generate trips (basic check, detailed check in service)"""
+        return self.subscription_status == "active"
     
     class Config:
         from_attributes = True

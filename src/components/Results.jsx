@@ -19,12 +19,19 @@ import {
   Car,
   Globe,
   MapPinned,
-  Info
+  Info,
+  Crown,
+  Lock,
+  Zap
 } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
+import { useSubscription } from '../context/SubscriptionContext'
+import { useNavigate } from 'react-router-dom'
 import ImprovedCostsTab from './ImprovedCostsTab'
 const Results = ({ results, error, onReset, formData, selectedVibe }) => {
   const [activeTab, setActiveTab] = useState('overview')
+  const { subscription, isPremium } = useSubscription()
+  const navigate = useNavigate()
 
   if (error) {
     return (
@@ -84,6 +91,46 @@ const Results = ({ results, error, onReset, formData, selectedVibe }) => {
     { id: 'costs', name: 'Costs', icon: DollarSign }
   ]
 
+  // Get tier icon
+  const getTierIcon = () => {
+    switch (subscription?.tier) {
+      case 'trip_pass':
+        return <Star className="w-4 h-4" />
+      case 'explorer_annual':
+        return <Zap className="w-4 h-4" />
+      case 'travel_pro':
+        return <Crown className="w-4 h-4" />
+      default:
+        return null
+    }
+  }
+
+  const getTierColor = () => {
+    switch (subscription?.tier) {
+      case 'trip_pass':
+        return 'from-blue-500 to-blue-600'
+      case 'explorer_annual':
+        return 'from-purple-500 to-purple-600'
+      case 'travel_pro':
+        return 'from-amber-500 to-amber-600'
+      default:
+        return 'from-gray-500 to-gray-600'
+    }
+  }
+
+  const getTierName = () => {
+    switch (subscription?.tier) {
+      case 'trip_pass':
+        return 'Trip Pass'
+      case 'explorer_annual':
+        return 'Explorer Annual'
+      case 'travel_pro':
+        return 'Travel Pro'
+      default:
+        return 'Free Explorer'
+    }
+  }
+
   return (
     <motion.div
       className="max-w-6xl mx-auto"
@@ -91,6 +138,20 @@ const Results = ({ results, error, onReset, formData, selectedVibe }) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
+      {/* Subscription Tier Badge */}
+      {subscription && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 flex justify-center"
+        >
+          <div className={`inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r ${getTierColor()} text-white rounded-full shadow-lg`}>
+            {getTierIcon()}
+            <span className="font-semibold">{getTierName()}</span>
+          </div>
+        </motion.div>
+      )}
+
       {/* Header */}
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-gray-900 mb-2">
@@ -107,10 +168,21 @@ const Results = ({ results, error, onReset, formData, selectedVibe }) => {
           <Share2 className="w-4 h-4 inline mr-2" />
           Share
         </button>
-        <button className="btn-secondary">
-          <Download className="w-4 h-4 inline mr-2" />
-          Download PDF
-        </button>
+        {isPremium() ? (
+          <button className="btn-secondary">
+            <Download className="w-4 h-4 inline mr-2" />
+            Download PDF
+          </button>
+        ) : (
+          <button 
+            onClick={() => navigate('/pricing')}
+            className="btn-secondary relative"
+          >
+            <Lock className="w-4 h-4 inline mr-2" />
+            Download PDF
+            <span className="ml-2 text-xs bg-yellow-400 text-yellow-900 px-2 py-0.5 rounded-full">Premium</span>
+          </button>
+        )}
         <button onClick={onReset} className="btn-primary">
           <ArrowLeft className="w-4 h-4 inline mr-2" />
           Plan Another Trip

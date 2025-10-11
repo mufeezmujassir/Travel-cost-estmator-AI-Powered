@@ -1,8 +1,13 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Calendar, Users, MapPin, DollarSign, ArrowRight, Plane, Sparkles } from 'lucide-react'
+import { Calendar, Users, MapPin, DollarSign, ArrowRight, Plane, Sparkles, AlertCircle } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { useSubscription } from '../context/SubscriptionContext'
+import UpgradeModal from './subscription/UpgradeModal'
 
 const TravelForm = ({ onSubmit, initialData = {} }) => {
+  const navigate = useNavigate()
+  const { canGenerateTrip, usageStats, subscription, loading: subLoading } = useSubscription()
   const [formData, setFormData] = useState({
     origin: initialData.origin || '',
     destination: initialData.destination || '',
@@ -14,6 +19,8 @@ const TravelForm = ({ onSubmit, initialData = {} }) => {
 
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [limitCheckResult, setLimitCheckResult] = useState(null)
 
   const validateForm = () => {
     const newErrors = {}
@@ -40,6 +47,16 @@ const TravelForm = ({ onSubmit, initialData = {} }) => {
 
     setIsSubmitting(true)
     
+    // Check trip limit before proceeding
+    const limitCheck = await canGenerateTrip(formData.destination)
+    setLimitCheckResult(limitCheck)
+    
+    if (!limitCheck.can_generate) {
+      setIsSubmitting(false)
+      setShowUpgradeModal(true)
+      return
+    }
+    
     // Simulate a brief loading state for better UX
     await new Promise(resolve => setTimeout(resolve, 500))
     
@@ -57,13 +74,50 @@ const TravelForm = ({ onSubmit, initialData = {} }) => {
   const today = new Date().toISOString().split('T')[0]
 
   return (
-    <motion.div
-      className="max-w-4xl mx-auto"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      {/* Header Section */}
+    <>
+      <motion.div
+        className="max-w-4xl mx-auto"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        {/* Usage Stats Banner */}
+        {!subLoading && usageStats && subscription && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-2xl"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-gray-900">
+                  {subscription.tier === 'free' ? '🆓 Free Explorer' : 
+                   subscription.tier === 'trip_pass' ? '⭐ Trip Pass' :
+                   subscription.tier === 'explorer_annual' ? '⚡ Explorer Annual' : 
+                   '👑 Travel Pro'}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {usageStats.trips_remaining === null ? 
+                    'Unlimited trips remaining' : 
+                    usageStats.trips_remaining === 0 ?
+                    '⚠️ No trips remaining - upgrade to continue' :
+                    `${usageStats.trips_remaining} trip${usageStats.trips_remaining === 1 ? '' : 's'} remaining this year`
+                  }
+                </p>
+              </div>
+              {(subscription.tier === 'free' || usageStats.trips_remaining === 0) && (
+                <button
+                  onClick={() => navigate('/pricing')}
+                  className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg text-sm font-semibold hover:shadow-lg transition"
+                >
+                  Upgrade
+                </button>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Header Section */}
       <div className="text-center mb-12">
         <motion.div
           initial={{ scale: 0 }}
@@ -346,7 +400,17 @@ const TravelForm = ({ onSubmit, initialData = {} }) => {
           <p className="text-gray-600 text-sm">Tailored recommendations just for you</p>
         </div>
       </motion.div>
-    </motion.div>
+      </motion.div>
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentTier={subscription?.tier || 'free'}
+        reason={limitCheckResult?.reason || 'You\'ve reached your trip limit'}
+        suggestedTier={limitCheckResult?.upgrade_required || 'trip_pass'}
+      />
+    </>
   )
 }
 

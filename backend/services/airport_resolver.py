@@ -132,21 +132,21 @@ class AirportResolver:
             self._cache[city_key] = code
             return code
         
-        # Strategy 2: Check core city map (covers 90% of searches)
+        # Strategy 2: Check if city is actually a country name
+        if city_key in self.COUNTRY_AIRPORTS:
+            code = self.COUNTRY_AIRPORTS[city_key]
+            print(f"✈️ Resolved '{city}' → {code} (from country mapping)")
+            self._cache[city_key] = code
+            return code
+        
+        # Strategy 3: Check core city map (covers 90% of searches)
         if city_key in self.CORE_CITY_MAP:
             code = self.CORE_CITY_MAP[city_key]
             print(f"✈️ Resolved '{city}' → {code} (from core map)")
             self._cache[city_key] = code
             return code
         
-        # Strategy 3: Smart web search for "nearest airport"
-        code = await self._search_nearest_airport(city, country)
-        if code and code != "UNKNOWN":
-            print(f"✈️ Resolved '{city}' → {code} (from smart search)")
-            self._cache[city_key] = code
-            return code
-        
-        # Strategy 4: Country fallback
+        # Strategy 4: Country fallback (prioritize over web search for country names)
         if country:
             country_key = country.strip().lower()
             if country_key in self.COUNTRY_AIRPORTS:
@@ -155,7 +155,14 @@ class AirportResolver:
                 self._cache[city_key] = code
                 return code
         
-        # Strategy 5: Detect country from city and use country airport
+        # Strategy 5: Smart web search for "nearest airport" (only if not a country name)
+        code = await self._search_nearest_airport(city, country)
+        if code and code != "UNKNOWN":
+            print(f"✈️ Resolved '{city}' → {code} (from smart search)")
+            self._cache[city_key] = code
+            return code
+        
+        # Strategy 6: Detect country from city and use country airport
         code = await self._detect_country_and_resolve(city)
         if code and code != "UNKNOWN":
             print(f"✈️ Resolved '{city}' → {code} (from detected country)")

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Routes, Route, useNavigate } from 'react-router-dom'
 import Header from './components/Header'
 import TravelForm from './components/TravelForm'
 import VibeSelector from './components/VibeSelector'
@@ -8,8 +9,10 @@ import LoadingSpinner from './components/LoadingSpinner'
 import Login from './components/auth/Login'
 import Register from './components/auth/Register'
 import Profile from './components/auth/Profile'
+import PricingPage from './components/pricing/PricingPage'
 import { useTravelEstimation } from './hooks/useTravelEstimation'
 import { useAuth } from './context/AuthContext'
+import { SubscriptionProvider } from './context/SubscriptionContext'
 
 function App() {
   const [currentStep, setCurrentStep] = useState(1)
@@ -108,18 +111,22 @@ const handleVibeSelect = async (vibe) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <Header 
-        onAuthNavigate={handleNavigateToAuth}
-        onProfileNavigate={handleNavigateToProfile}
-        onTravelNavigate={handleBackToTravel}
-        currentView={currentView}
-      />
-      
-      <main className="container mx-auto px-4 py-8">
-        <AnimatePresence mode="wait">
-          {/* Authentication Views */}
-          {currentView === 'login' && (
+    <SubscriptionProvider>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        <Header 
+          onAuthNavigate={handleNavigateToAuth}
+          onProfileNavigate={handleNavigateToProfile}
+          onTravelNavigate={handleBackToTravel}
+          currentView={currentView}
+        />
+        
+        <main className="container mx-auto px-4 py-8">
+          <Routes>
+            <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/*" element={
+              <AnimatePresence mode="wait">
+                {/* Authentication Views */}
+                {currentView === 'login' && (
             <motion.div
               key="login"
               initial={{ opacity: 0, y: 20 }}
@@ -229,11 +236,14 @@ const handleVibeSelect = async (vibe) => {
                   )}
                 </motion.div>
               )}
-            </>
-          )}
-        </AnimatePresence>
-      </main>
-    </div>
+              </>
+            )}
+          </AnimatePresence>
+            } />
+          </Routes>
+        </main>
+      </div>
+    </SubscriptionProvider>
   )
 }
 
