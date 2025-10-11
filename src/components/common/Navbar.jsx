@@ -18,6 +18,7 @@ const Navbar = () => {
             <Link to="/" className="text-xl font-bold text-blue-600">
               UserManager
             </Link>
+            
           </div>
 
           <div className="flex items-center space-x-4">

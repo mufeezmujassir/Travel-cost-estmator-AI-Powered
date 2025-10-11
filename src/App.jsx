@@ -8,12 +8,13 @@ import LoadingSpinner from './components/LoadingSpinner'
 import Login from './components/auth/Login'
 import Register from './components/auth/Register'
 import Profile from './components/auth/Profile'
+import Aboutus from './components/aboutus'
 import { useTravelEstimation } from './hooks/useTravelEstimation'
 import { useAuth } from './context/AuthContext'
 
 function App() {
   const [currentStep, setCurrentStep] = useState(1)
-  const [currentView, setCurrentView] = useState('travel') // 'travel', 'login', 'register', 'profile'
+  const [currentView, setCurrentView] = useState('travel') 
   const [formData, setFormData] = useState({
     origin: '',
     destination: '',
@@ -107,12 +108,18 @@ const handleVibeSelect = async (vibe) => {
     )
   }
 
+  // Handler for About Us navigation
+  const handleNavigateToAbout = () => {
+    setCurrentView('aboutus')
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <Header 
         onAuthNavigate={handleNavigateToAuth}
         onProfileNavigate={handleNavigateToProfile}
         onTravelNavigate={handleBackToTravel}
+        onAboutNavigate={handleNavigateToAbout}
         currentView={currentView}
       />
       
@@ -160,6 +167,19 @@ const handleVibeSelect = async (vibe) => {
               transition={{ duration: 0.3 }}
             >
               <Profile onBack={handleBackToTravel} />
+            </motion.div>
+          )}
+
+          {/* About Us View */}
+          {currentView === 'aboutus' && (
+            <motion.div
+              key="aboutus"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Aboutus />
             </motion.div>
           )}
 
