@@ -4,7 +4,7 @@ import { Plane, Brain, MapPin, DollarSign, User, LogOut } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
 
-const Header = ({ onAuthNavigate, onProfileNavigate, onTravelNavigate, currentView }) => {
+const Header = ({ onAuthNavigate, onProfileNavigate, onTravelNavigate, onAboutNavigate, currentView }) => {
   const { user, isAuthenticated, logout } = useAuth()
 
   const handleLogout = () => {
@@ -30,6 +30,10 @@ const Header = ({ onAuthNavigate, onProfileNavigate, onTravelNavigate, currentVi
 
   const handleTravel = () => {
     onTravelNavigate()
+  }
+
+  const handleAbout = () => {
+    if (onAboutNavigate) onAboutNavigate()
   }
 
   return (
@@ -77,6 +81,9 @@ const Header = ({ onAuthNavigate, onProfileNavigate, onTravelNavigate, currentVi
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <DollarSign className="w-4 h-4 text-green-500" />
                 <span>Cost Optimization</span>
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-gray-600 cursor-pointer hover:text-blue-600" onClick={handleAbout}>
+                <span>About Us</span>
               </div>
             </div>
           )}
