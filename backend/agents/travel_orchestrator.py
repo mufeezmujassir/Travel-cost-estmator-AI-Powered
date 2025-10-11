@@ -17,6 +17,9 @@ from .recommendation_agent import RecommendationAgent
 
 from models.travel_models import TravelRequest, TravelResponse, Flight, Hotel, DayItinerary, CostBreakdown, SeasonRecommendation
 from services.config import Settings
+from services.domestic_travel_analyzer import TransportationStrategyCache
+from services.distance_calculator import DistanceCalculator
+from services.airport_resolver import AirportResolver
 
 class TravelState(TypedDict):
     """State for the travel planning workflow"""
@@ -32,6 +35,9 @@ class TravelState(TypedDict):
     errors: List[str]
     completed_agents: List[str]
     price_trends: Dict[str, Any]  # Price calendar data
+    skip_flight_search: bool  # Whether to skip flight search for domestic travel
+    is_domestic_travel: bool  # Whether this is domestic travel
+    travel_distance_km: float  # Distance between origin and destination
 
 class TravelOrchestrator:
     """Main orchestrator for coordinating all travel planning agents"""
@@ -41,6 +47,9 @@ class TravelOrchestrator:
         self.agents: Dict[str, BaseAgent] = {}
         self.graph = None
         self.initialized = False
+        self.strategy_cache = TransportationStrategyCache()
+        self.distance_calculator = None
+        self.airport_resolver = None
     
     async def initialize(self):
         """Initialize all agents and create the workflow graph"""
@@ -61,6 +70,16 @@ class TravelOrchestrator:
             await agent.initialize()
             print(f"✅ {name} agent initialized")
         
+        # Initialize domestic travel services
+        self.airport_resolver = AirportResolver(self.settings.serp_api_key)
+        
+        # Get gmaps_client from transportation agent
+        transport_agent = self.agents.get("transportation")
+        gmaps_client = transport_agent.gmaps_client if hasattr(transport_agent, 'gmaps_client') else None
+        self.distance_calculator = DistanceCalculator(self.settings, gmaps_client)
+        
+        print("✅ Domestic travel analyzer initialized")
+        
         # Create the workflow graph
         self._create_workflow_graph()
         
@@ -68,10 +87,11 @@ class TravelOrchestrator:
         print("🎯 Travel Orchestrator fully initialized!")
     
     def _create_workflow_graph(self):
-        """Create the LangGraph workflow for travel planning"""
+        """Create the LangGraph workflow for travel planning with conditional routing"""
         workflow = StateGraph(TravelState)
         
         # Add nodes for each agent
+        workflow.add_node("analyze_travel_type", self._analyze_travel_type)
         workflow.add_node("emotional_intelligence", self._run_emotional_intelligence_agent)
         workflow.add_node("flight_search", self._run_flight_search_agent)
         workflow.add_node("hotel_search", self._run_hotel_search_agent)
@@ -80,14 +100,26 @@ class TravelOrchestrator:
         workflow.add_node("recommendation", self._run_recommendation_agent)
         workflow.add_node("finalize", self._finalize_travel_plan)
         
-        # Define the workflow edges
-        workflow.set_entry_point("emotional_intelligence")
+        # Define the workflow edges with conditional routing
+        workflow.set_entry_point("analyze_travel_type")
         
-        # Emotional intelligence runs first
-        workflow.add_edge("emotional_intelligence", "flight_search")
+        # Analyze travel type first
+        workflow.add_edge("analyze_travel_type", "emotional_intelligence")
         
-        # Flight and hotel search can run in parallel
+        # After emotional intelligence, conditionally route based on travel type
+        workflow.add_conditional_edges(
+            "emotional_intelligence",
+            self._route_after_emotional_intelligence,
+            {
+                "flight_search": "flight_search",
+                "hotel_search": "hotel_search"
+            }
+        )
+        
+        # Flight search routes to hotel search
         workflow.add_edge("flight_search", "hotel_search")
+        
+        # Hotel search routes to transportation
         workflow.add_edge("hotel_search", "transportation_node")
         
         # Transportation runs after hotels
@@ -130,7 +162,10 @@ class TravelOrchestrator:
             ),
             errors=[],
             completed_agents=[],
-            price_trends={}  # Initialize price trends
+            price_trends={},  # Initialize price trends
+            skip_flight_search=False,  # Initialize domestic travel flags
+            is_domestic_travel=False,
+            travel_distance_km=0.0
         )
         
         # Run the workflow
@@ -146,6 +181,114 @@ class TravelOrchestrator:
         except Exception as e:
             print(f"❌ Error processing travel request: {e}")
             raise
+    
+    async def _analyze_travel_type(self, state: TravelState) -> TravelState:
+        """Analyze travel type to determine if flight search should be skipped"""
+        print("🔍 Analyzing travel type (domestic vs international)...")
+        
+        try:
+            request = state["request"]
+            
+            # Get airport codes for both origin and destination
+            origin_airport = await self.airport_resolver.get_airport_code(request.origin)
+            dest_airport = await self.airport_resolver.get_airport_code(request.destination)
+            
+            print(f"   Origin: {request.origin} → {origin_airport}")
+            print(f"   Destination: {request.destination} → {dest_airport}")
+            
+            # Case 1: Same airport code (e.g., Galle and Colombo both = CMB)
+            if origin_airport == dest_airport and origin_airport != "UNKNOWN":
+                # Calculate actual distance even if same airport
+                distance = await self.distance_calculator.calculate_distance(
+                    request.origin,
+                    request.destination
+                )
+                
+                state["skip_flight_search"] = True
+                state["is_domestic_travel"] = True
+                state["travel_distance_km"] = distance if distance else 0.0
+                print(f"✅ Same airport detected ({origin_airport}) - Skipping flight search")
+                print(f"   This is domestic ground travel within the same region")
+                if distance:
+                    print(f"   Distance: {distance:.1f} km")
+                return state
+            
+            # Case 2: Different airports - check distance and country
+            if origin_airport != "UNKNOWN" and dest_airport != "UNKNOWN":
+                # Detect countries
+                origin_country = await self.airport_resolver.get_country_for_city(request.origin)
+                dest_country = await self.airport_resolver.get_country_for_city(request.destination)
+                
+                print(f"   Origin Country: {origin_country}")
+                print(f"   Destination Country: {dest_country}")
+                
+                # Calculate distance
+                distance = await self.distance_calculator.calculate_distance(
+                    request.origin,
+                    request.destination
+                )
+                
+                if distance:
+                    state["travel_distance_km"] = distance
+                    print(f"   Distance: {distance:.1f} km")
+                    
+                    # Check if same country
+                    if origin_country and dest_country and origin_country.lower() == dest_country.lower():
+                        state["is_domestic_travel"] = True
+                        
+                        # Get country-specific transportation strategy
+                        strategy = await self.strategy_cache.get_strategy(origin_country, self.settings)
+                        max_ground_distance = strategy.get("max_ground_distance_km", 300)
+                        
+                        # Decide whether to skip flight search
+                        if distance <= max_ground_distance:
+                            state["skip_flight_search"] = True
+                            print(f"✅ Domestic travel within {origin_country}")
+                            print(f"   Distance ({distance:.1f} km) ≤ Max ground distance ({max_ground_distance} km)")
+                            print(f"   Skipping flight search - Ground transport recommended")
+                        else:
+                            state["skip_flight_search"] = False
+                            print(f"✅ Domestic travel within {origin_country}")
+                            print(f"   Distance ({distance:.1f} km) > Max ground distance ({max_ground_distance} km)")
+                            print(f"   Including flight search - Long distance requires air travel")
+                    else:
+                        # International travel
+                        state["is_domestic_travel"] = False
+                        state["skip_flight_search"] = False
+                        print(f"✅ International travel detected")
+                        print(f"   From {origin_country} to {dest_country}")
+                        print(f"   Including flight search")
+                else:
+                    # Could not calculate distance, default to including flights
+                    state["skip_flight_search"] = False
+                    state["is_domestic_travel"] = False
+                    print(f"⚠️ Could not calculate distance - Including flight search by default")
+            else:
+                # Could not resolve airports, default to including flights
+                state["skip_flight_search"] = False
+                state["is_domestic_travel"] = False
+                print(f"⚠️ Could not resolve airports - Including flight search by default")
+            
+            state["completed_agents"].append("travel_type_analyzer")
+            
+        except Exception as e:
+            error_msg = f"Travel type analysis error: {str(e)}"
+            state["errors"].append(error_msg)
+            print(f"❌ {error_msg}")
+            # Default to including flight search on error
+            state["skip_flight_search"] = False
+            state["is_domestic_travel"] = False
+        
+        return state
+    
+    def _route_after_emotional_intelligence(self, state: TravelState) -> str:
+        """Determine routing after emotional intelligence based on travel type"""
+        if state.get("skip_flight_search", False):
+            print("🔀 Routing: Skipping flight search → Going to hotel search")
+            return "hotel_search"
+        else:
+            print("🔀 Routing: Including flight search")
+            return "flight_search"
     
     async def _run_emotional_intelligence_agent(self, state: TravelState) -> TravelState:
         """Run the emotional intelligence agent"""
@@ -376,6 +519,9 @@ class TravelOrchestrator:
             recommendations=state["recommendations"],
             vibe_analysis=state["emotional_analysis"],
             price_trends=state.get("price_trends") if state.get("price_trends") else None,
+            transportation=state.get("transportation"),  # Include transportation data
+            is_domestic_travel=state.get("is_domestic_travel", False),  # Include domestic travel flag
+            travel_distance_km=state.get("travel_distance_km", 0.0),  # Include distance
             generated_at=datetime.now()
         )
     

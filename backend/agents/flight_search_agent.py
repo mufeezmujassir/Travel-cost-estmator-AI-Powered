@@ -120,6 +120,8 @@ class FlightSearchAgent(BaseAgent):
         
         for flight_data in flights_data:
             try:
+                # IMPORTANT: SERP API returns TOTAL price for all travelers when adults=N is specified
+                # So we should NOT multiply by travelers here - the price is already the total
                 flight = Flight(
                     airline=flight_data.get("airline", "Unknown"),
                     flight_number=flight_data.get("flight_number", "N/A"),
@@ -129,7 +131,7 @@ class FlightSearchAgent(BaseAgent):
                     arrival_airport=flight_data.get("arrival_airport", "N/A"),
                     duration=flight_data.get("duration", "N/A"),
                     class_type=flight_data.get("class_type", "Economy"),
-                    price=flight_data.get("price", 0.0) * request.travelers,
+                    price=flight_data.get("price", 0.0),  # Already total price from SERP
                     stops=flight_data.get("stops", 0),
                     aircraft=flight_data.get("aircraft")
                 )
@@ -141,20 +143,23 @@ class FlightSearchAgent(BaseAgent):
         return processed_flights
     
     def _select_best_flights(self, flights: List[Flight], request: TravelRequest) -> List[Flight]:
-        """Select the best flight options based on criteria"""
+        """Select the best flight options - prioritize price with minor stop penalty"""
         if not flights:
             return []
         
-        # Sort by price and other factors
-        def flight_score(flight: Flight) -> float:
-            price_score = 1.0 / (flight.price + 1)
+        # Sort by price with small penalty for stops
+        def flight_sort_key(flight: Flight) -> float:
+            # Base price
+            price = flight.price
             
-            stops_score = 1.0 / (flight.stops + 1)
+            # Add small penalty for each stop ($50 per stop)
+            # This way a 1-stop flight that's $200 cheaper will still rank higher
+            stops_penalty = flight.stops * 50
             
-            return price_score * 0.7 + stops_score * 0.3
+            return price + stops_penalty
         
-        # Sort flights by score
-        sorted_flights = sorted(flights, key=flight_score, reverse=True)
+        # Sort flights by adjusted price (cheapest first)
+        sorted_flights = sorted(flights, key=flight_sort_key)
         
-        # Return top 3 options
-        return sorted_flights[:3]
+        # Return top 10 options (increased from 3 to give users more choices)
+        return sorted_flights[:10]
