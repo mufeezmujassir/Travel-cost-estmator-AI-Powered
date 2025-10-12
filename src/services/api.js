@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -27,15 +27,17 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 422) {
+    if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/';
+      // Don't auto-redirect, let the app handle it
+      console.log('Session expired. Please login again.');
     }
     return Promise.reject(error);
   }
 );
 
+// Auth APIs
 export const authAPI = {
   register: (userData) => api.post('/auth/register', userData),
   login: (credentials) => api.post('/auth/login', credentials),
@@ -51,7 +53,14 @@ export const travelAPI = {
   getVibes: () => api.get('/api/vibes'),
   getSeasonRecommendation: (vibe, destination, startDate) => 
     api.get(`/api/season-recommendation?vibe=${vibe}&destination=${destination}&start_date=${startDate}`),
-  getPublicVibes: () => api.get('/public/vibes'),
+  getPublicVibes: () => axios.get(`${API_BASE_URL}/public/vibes`), // Public endpoint, no auth needed
+};
+
+// Subscription APIs
+export const subscriptionAPI = {
+  createCheckoutSession: () => api.post('/subscription/create-checkout-session'),
+  cancelSubscription: () => api.post('/subscription/cancel'),
+  getSubscriptionStatus: () => api.get('/subscription/status'),
 };
 
 export default api;

@@ -15,6 +15,13 @@ from passlib.context import CryptContext
 from agents.travel_orchestrator import TravelOrchestrator
 from models.travel_models import TravelRequest, TravelResponse
 from services.config import Settings
+from services.auth_service import get_current_user, AuthService
+from schemas.user_schema import UserResponse
+
+# Import routers
+from routes.auth_routes import router as auth_router
+from routes.subscription_routes import router as subscription_router
+
 
 # Load environment variables
 load_dotenv()
@@ -171,7 +178,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Travel Cost Estimator API",
     description="AI-Powered Multi-Agent Travel Planning System with User Management",
-    version="1.0.0",
+    version="2.0.0",
     lifespan=lifespan
 )
 
@@ -183,6 +190,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(auth_router)
+app.include_router(subscription_router)
 
 # Create logger
 logger = logging.getLogger("travel_api")
@@ -292,11 +301,16 @@ async def update_profile(
     # Return updated user
     updated_user = users_collection.find_one({"_id": ObjectId(current_user.id)})
     return UserResponse(
-        id=str(updated_user["_id"]),
-        name=updated_user["name"],
-        email=updated_user["email"],
-        created_at=updated_user["created_at"]
-    )
+            id=str(updated_user["_id"]),
+            name=updated_user["name"],
+            email=updated_user["email"],
+            created_at=updated_user["created_at"],
+            type=updated_user.get("type", "basic"),
+            hasUsedFreePlan=updated_user.get("hasUsedFreePlan", False),
+            subscriptionStatus=updated_user.get("subscriptionStatus", "expired"),
+            stripeCustomerId=updated_user.get("stripeCustomerId"),
+            subscriptionId=updated_user.get("subscriptionId")
+        )
 
 @app.delete("/auth/profile")
 async def delete_profile(current_user: UserResponse = Depends(get_current_user)):
@@ -330,7 +344,12 @@ async def get_user_by_id(user_id: str):
             id=str(user["_id"]),
             name=user["name"],
             email=user["email"],
-            created_at=user["created_at"]
+            created_at=user["created_at"],
+            type=user.get("type", "basic"),
+            hasUsedFreePlan=user.get("hasUsedFreePlan", False),
+            subscriptionStatus=user.get("subscriptionStatus", "expired"),
+            stripeCustomerId=user.get("stripeCustomerId"),
+            subscriptionId=user.get("subscriptionId")
         )
     except Exception:
         raise HTTPException(
@@ -344,7 +363,7 @@ async def root():
     """Root endpoint"""
     return {
         "message": "Travel Cost Estimator API with User Management",
-        "version": "1.0.0",
+        "version": "2.0.0",
         "status": "active",
         "features": [
             "User Authentication & Management",
@@ -353,7 +372,11 @@ async def root():
             "Hotel Search Agent",
             "Transportation Agent",
             "Cost Estimation Agent",
-            "Recommendation Agent"
+            "Recommendation Agent",
+            "Subscription Management (Free & Premium)",
+            "Stripe Integration",
+            "AI-Powered Travel Planning",
+            "Multi-Agent System"
         ]
     }
 
@@ -376,22 +399,36 @@ async def estimate_travel(
     Orchestrates all agents to provide comprehensive travel planning
     """
     try:
+        can_generate = await AuthService.check_generation_limit(current_user.id)
+        if not can_generate:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Generation limit reached. Please upgrade to premium for unlimited access."
+            )
+        
         logger.info(f"Received travel request from user: {current_user.email}")
         logger.info("Received request body: %s", request.dict())
         
         if not orchestrator:
             raise HTTPException(status_code=503, detail="Service not ready")
         
+        # Log the travel request details
+        print(f"🎯 Processing travel request from user: {current_user.email}")
+
         logger.info("🎯 Processing travel request: %s → %s", request.origin, request.destination)
         logger.info("📅 Dates: %s to %s", request.start_date, request.return_date)
         logger.info("👥 Travelers: %s", request.travelers)
         logger.info("💭 Vibe: %s", request.vibe)        
         # Process the travel request through all agents
         result = await orchestrator.process_travel_request(request)
-        
+
+        await AuthService.use_generation(current_user.id)
+
         logger.info("✅ Travel estimation completed successfully for user: %s", current_user.email)
         return result
-        
+    except HTTPException:
+        raise
+
     except Exception as e:
         logger.exception("❌ Error processing travel request")
         raise HTTPException(status_code=500, detail=f"Failed to process travel request: {str(e)}")
