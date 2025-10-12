@@ -216,36 +216,52 @@ class SubscriptionService:
             if not region:
                 region = destination  # Fallback
             
-            # Create trip pass
-            trip_pass = TripPass(
-                destination=destination,
-                region=region,
-                created_at=datetime.utcnow(),
-                expires_at=datetime.utcnow() + timedelta(days=90),
-                trips_generated=0,
-                is_active=True,
-                payment_intent_id=payment_intent_id
-            )
-            
-            # Add to active trip passes
-            subscription.active_trip_passes.append(trip_pass)
+            # Check if user already has an active trip pass for this region
+            existing_trip_pass = subscription.get_active_trip_pass_for_region(region)
+            if existing_trip_pass:
+                logger.warning(f"⚠️ User {user_id} already has an active trip pass for {region}")
+                # Update the existing trip pass instead of creating a new one
+                existing_trip_pass.trips_generated = 0  # Reset trip count
+                existing_trip_pass.expires_at = datetime.utcnow() + timedelta(days=90)  # Extend expiry
+                existing_trip_pass.payment_intent_id = payment_intent_id
+                logger.info(f"✅ Updated existing trip pass for user {user_id} - Region: {region}, New Expiry: {existing_trip_pass.expires_at}")
+            else:
+                # Create new trip pass
+                trip_pass = TripPass(
+                    destination=destination,
+                    region=region,
+                    created_at=datetime.utcnow(),
+                    expires_at=datetime.utcnow() + timedelta(days=90),
+                    trips_generated=0,
+                    is_active=True,
+                    payment_intent_id=payment_intent_id
+                )
+                
+                # Add to active trip passes
+                subscription.active_trip_passes.append(trip_pass)
+                logger.info(f"✅ Created new trip pass for user {user_id} - Region: {region}, Expires: {trip_pass.expires_at}")
             
             # Update tier to trip pass
             subscription.tier = SubscriptionTier.TRIP_PASS
             subscription.status = SubscriptionStatus.ACTIVE
             
             # Add history entry
-            subscription.add_history_entry("trip_pass_activated", {
+            action = "trip_pass_updated" if existing_trip_pass else "trip_pass_activated"
+            expiry_date = existing_trip_pass.expires_at if existing_trip_pass else trip_pass.expires_at
+            
+            subscription.add_history_entry(action, {
                 "destination": destination,
                 "region": region,
-                "expires_at": trip_pass.expires_at.isoformat(),
-                "payment_intent_id": payment_intent_id
+                "expires_at": expiry_date.isoformat(),
+                "payment_intent_id": payment_intent_id,
+                "updated_existing": bool(existing_trip_pass)
             })
             
             # Save to database
             await self._save_subscription(user_id, subscription.dict())
             
-            logger.info(f"✅ Activated trip pass for user {user_id} - Region: {region}, Expires: {trip_pass.expires_at}")
+            final_expiry = existing_trip_pass.expires_at if existing_trip_pass else trip_pass.expires_at
+            logger.info(f"✅ Activated trip pass for user {user_id} - Region: {region}, Expires: {final_expiry}")
             return True
             
         except Exception as e:

@@ -56,6 +56,9 @@ async def get_subscription_status(
         
         is_premium = subscription.tier != SubscriptionTier.FREE
         
+        # Get tier limits to include allowed vibes
+        tier_limits = get_tier_limits(subscription.tier)
+        
         response = SubscriptionResponse(
             tier=subscription.tier,
             status=subscription.status,
@@ -63,6 +66,7 @@ async def get_subscription_status(
             expires_at=subscription.expires_at,
             active_trip_passes=subscription.active_trip_passes,
             usage_stats=subscription.usage_stats,
+            allowed_vibes=tier_limits.allowed_vibes,
             is_premium=is_premium,
             can_generate_trip=can_generate,
             stripe_customer_id=subscription.stripe_customer_id
@@ -197,6 +201,40 @@ async def cancel_subscription(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to cancel subscription"
+        )
+
+@router.post("/manual-track-trip")
+async def manual_track_trip(
+    request: dict,  # {"destination": "Paris"}
+    current_user: UserResponse = Depends(get_current_user),
+    service: SubscriptionService = Depends(get_subscription_service)
+):
+    """
+    Manually track a trip generation for testing purposes.
+    This endpoint allows you to manually increment trip usage.
+    """
+    try:
+        destination = request.get("destination", "Test Destination")
+        
+        success = await service.record_trip_generation(current_user.id, destination)
+        
+        if success:
+            logger.info(f"✅ Manually tracked trip for user {current_user.id} to {destination}")
+            return {
+                "message": f"Trip to {destination} tracked successfully",
+                "destination": destination
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to track trip"
+            )
+            
+    except Exception as e:
+        logger.error(f"❌ Error manually tracking trip for user {current_user.id}: {type(e)} - {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to track trip: {str(e)}"
         )
 
 # Import at module level after defining router

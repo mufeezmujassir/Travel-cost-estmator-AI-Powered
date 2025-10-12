@@ -97,7 +97,7 @@ TIER_INFO: Dict[SubscriptionTier, TierInfo] = {
     SubscriptionTier.TRIP_PASS: TierInfo(
         tier=SubscriptionTier.TRIP_PASS,
         name="Trip Pass",
-        price=15.0,
+        price=25.0,
         billing_period="one-time",
         description="Perfect for planning your annual trip - valid for 90 days",
         features=[
@@ -123,9 +123,9 @@ TIER_INFO: Dict[SubscriptionTier, TierInfo] = {
         name="Explorer Annual",
         price=59.0,
         billing_period="annual",
-        description="For travelers who take multiple trips per year",
+        description="For travelers who take multiple trips per year to ANY destination",
         features=[
-            "3 complete trip estimates per year",
+            "3 complete trip estimates per year to ANY destination",
             "All 7 travel vibes available",
             "Up to 5 flight options",
             "Up to 5 hotel options",
@@ -148,9 +148,9 @@ TIER_INFO: Dict[SubscriptionTier, TierInfo] = {
         name="Travel Pro",
         price=149.0,
         billing_period="annual",
-        description="For frequent travelers, bloggers, and travel professionals",
+        description="For frequent travelers, bloggers, and travel professionals - ANY destination",
         features=[
-            "UNLIMITED trip estimates",
+            "UNLIMITED trip estimates to ANY destination",
             "All 7 travel vibes available",
             "Up to 10 flight options",
             "Up to 10 hotel options",

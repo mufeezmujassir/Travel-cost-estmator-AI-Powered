@@ -1,9 +1,11 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Heart, Mountain, Waves, TreePine, Camera, Utensils, Zap } from 'lucide-react'
+import { ArrowLeft, Heart, Mountain, Waves, TreePine, Camera, Utensils, Zap, Lock, Crown } from 'lucide-react'
+import { useSubscription } from '../context/SubscriptionContext'
 
 const VibeSelector = ({ onVibeSelect, onBack, formData }) => {
   const [selectedVibe, setSelectedVibe] = useState(null)
+  const { subscription } = useSubscription()
 
   const vibes = [
     {
@@ -78,8 +80,25 @@ const VibeSelector = ({ onVibeSelect, onBack, formData }) => {
     }
   ]
 
+  // Check if a vibe is allowed for the user's subscription tier
+  const isVibeAllowed = (vibeId) => {
+    if (!subscription) return false
+    
+    // Get allowed vibes from subscription
+    const allowedVibes = subscription.allowed_vibes || []
+    return allowedVibes.includes(vibeId)
+  }
+
   const handleVibeSelect = (vibe) => {
     console.log('🎯 Selecting vibe:', vibe.name);
+    
+    // Check if vibe is allowed
+    if (!isVibeAllowed(vibe.id)) {
+      console.log('🚫 Vibe not allowed for current subscription');
+      // Could show upgrade modal here
+      return
+    }
+    
     setSelectedVibe(vibe)
     // Call onVibeSelect immediately without delay
     onVibeSelect(vibe)
@@ -135,18 +154,21 @@ const VibeSelector = ({ onVibeSelect, onBack, formData }) => {
         {vibes.map((vibe) => {
           const Icon = vibe.icon
           const seasonInfo = getSeasonRecommendation(vibe)
+          const isAllowed = isVibeAllowed(vibe.id)
           
           return (
             <motion.div
               key={vibe.id}
-              className={`relative cursor-pointer rounded-xl shadow-lg transition-all duration-300 ${
-                selectedVibe?.id === vibe.id 
-                  ? 'ring-4 ring-blue-500 scale-105' 
-                  : 'hover:shadow-xl'
+              className={`relative rounded-xl shadow-lg transition-all duration-300 ${
+                !isAllowed 
+                  ? 'opacity-60 cursor-not-allowed' 
+                  : selectedVibe?.id === vibe.id 
+                    ? 'ring-4 ring-blue-500 scale-105 cursor-pointer' 
+                    : 'hover:shadow-xl cursor-pointer'
               }`}
               onClick={() => handleVibeSelect(vibe)}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={isAllowed ? { scale: 1.02 } : {}}
+              whileTap={isAllowed ? { scale: 0.98 } : {}}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: vibes.indexOf(vibe) * 0.1 }}
@@ -158,6 +180,19 @@ const VibeSelector = ({ onVibeSelect, onBack, formData }) => {
                   className="w-full h-full object-cover"
                 />
                 <div className={`absolute inset-0 bg-gradient-to-t ${vibe.color} opacity-60`} />
+                
+                {/* Lock overlay for restricted vibes */}
+                {!isAllowed && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-2">
+                        <Lock className="w-8 h-8 text-white" />
+                      </div>
+                      <p className="text-white font-semibold">Premium Only</p>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="absolute top-4 right-4">
                   <div className={`p-2 rounded-full bg-white/20 backdrop-blur-sm`}>
                     <Icon className="w-6 h-6 text-white" />
@@ -215,6 +250,31 @@ const VibeSelector = ({ onVibeSelect, onBack, formData }) => {
           <p className="text-blue-800">
             Selected: <strong>{selectedVibe.name}</strong> - Generating your travel plan...
           </p>
+        </motion.div>
+      )}
+
+      {/* Upgrade prompt for users with limited vibes */}
+      {subscription && subscription.tier === 'free' && (
+        <motion.div
+          className="mt-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <Crown className="w-5 h-5 text-purple-600" />
+            <h3 className="font-semibold text-gray-900">Unlock All Travel Vibes</h3>
+          </div>
+          <p className="text-gray-600 text-sm text-center mb-3">
+            Upgrade to access all 7 travel vibes including Romantic, Adventure, Beach, Nature, Cultural, Culinary, and Wellness experiences!
+          </p>
+          <div className="flex justify-center gap-2">
+            <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+              Free: Limited vibes
+            </span>
+            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+              Paid: All 7 vibes
+            </span>
+          </div>
         </motion.div>
       )}
     </motion.div>

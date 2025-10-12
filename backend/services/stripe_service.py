@@ -43,7 +43,7 @@ class StripeService:
             )
             logger.info(f"✅ Created Stripe customer {customer.id} for user {user_id}")
             return customer.id
-        except stripe.error.StripeError as e:
+        except stripe.StripeError as e:
             logger.error(f"❌ Stripe error creating customer: {e}")
             return None
         except Exception as e:
@@ -112,7 +112,7 @@ class StripeService:
                 "payment_status": session.payment_status
             }
             
-        except stripe.error.StripeError as e:
+        except stripe.StripeError as e:
             logger.error(f"❌ Stripe error creating checkout session: {e}")
             return None
         except Exception as e:
@@ -146,7 +146,6 @@ class StripeService:
                 recurring={"interval": "year"},
                 product_data={
                     "name": tier_info.name,
-                    "description": tier_info.description,
                 },
             )
             
@@ -183,7 +182,7 @@ class StripeService:
                 "payment_status": session.payment_status
             }
             
-        except stripe.error.StripeError as e:
+        except stripe.StripeError as e:
             logger.error(f"❌ Stripe error creating subscription checkout: {e}")
             return None
         except Exception as e:
@@ -208,7 +207,7 @@ class StripeService:
         except ValueError as e:
             logger.error(f"❌ Invalid webhook payload: {e}")
             return None
-        except stripe.error.SignatureVerificationError as e:
+        except stripe.SignatureVerificationError as e:
             logger.error(f"❌ Invalid webhook signature: {e}")
             return None
     
@@ -227,7 +226,7 @@ class StripeService:
             )
             logger.info(f"✅ Cancelled subscription {subscription_id}")
             return True
-        except stripe.error.StripeError as e:
+        except stripe.StripeError as e:
             logger.error(f"❌ Stripe error cancelling subscription: {e}")
             return False
         except Exception as e:
@@ -246,7 +245,7 @@ class StripeService:
             subscription = stripe.Subscription.delete(subscription_id)
             logger.info(f"✅ Immediately cancelled subscription {subscription_id}")
             return True
-        except stripe.error.StripeError as e:
+        except stripe.StripeError as e:
             logger.error(f"❌ Stripe error cancelling subscription immediately: {e}")
             return False
         except Exception as e:
@@ -270,7 +269,7 @@ class StripeService:
                 "cancel_at_period_end": subscription.cancel_at_period_end,
                 "customer": subscription.customer
             }
-        except stripe.error.StripeError as e:
+        except stripe.StripeError as e:
             logger.error(f"❌ Stripe error retrieving subscription: {e}")
             return None
         except Exception as e:
@@ -293,7 +292,7 @@ class StripeService:
                 "name": customer.name,
                 "metadata": customer.metadata
             }
-        except stripe.error.StripeError as e:
+        except stripe.StripeError as e:
             logger.error(f"❌ Stripe error retrieving customer: {e}")
             return None
         except Exception as e:

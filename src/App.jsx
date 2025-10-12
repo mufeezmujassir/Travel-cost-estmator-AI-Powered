@@ -12,9 +12,10 @@ import Profile from './components/auth/Profile'
 import PricingPage from './components/pricing/PricingPage'
 import { useTravelEstimation } from './hooks/useTravelEstimation'
 import { useAuth } from './context/AuthContext'
-import { SubscriptionProvider } from './context/SubscriptionContext'
+import { SubscriptionProvider, useSubscription } from './context/SubscriptionContext'
 
-function App() {
+// Inner component that has access to both contexts
+function AppContent() {
   const [currentStep, setCurrentStep] = useState(1)
   const [currentView, setCurrentView] = useState('travel') // 'travel', 'login', 'register', 'profile'
   const [formData, setFormData] = useState({
@@ -27,12 +28,13 @@ function App() {
   })
   const [selectedVibe, setSelectedVibe] = useState(null)
   
+  const { refreshSubscription } = useSubscription()
   const { 
     estimateTravel, 
     results, 
     loading, 
     error 
-  } = useTravelEstimation()
+  } = useTravelEstimation(refreshSubscription)
 
   const { user, isAuthenticated, loading: authLoading } = useAuth()
 
@@ -111,138 +113,145 @@ const handleVibeSelect = async (vibe) => {
   }
 
   return (
-    <SubscriptionProvider>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-        <Header 
-          onAuthNavigate={handleNavigateToAuth}
-          onProfileNavigate={handleNavigateToProfile}
-          onTravelNavigate={handleBackToTravel}
-          currentView={currentView}
-        />
-        
-        <main className="container mx-auto px-4 py-8">
-          <Routes>
-            <Route path="/pricing" element={<PricingPage />} />
-            <Route path="/*" element={
-              <AnimatePresence mode="wait">
-                {/* Authentication Views */}
-                {currentView === 'login' && (
-            <motion.div
-              key="login"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Login 
-                onSuccess={handleAuthSuccess}
-                onSwitchToRegister={() => setCurrentView('register')}
-                onBack={handleBackToTravel}
-              />
-            </motion.div>
-          )}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <Header 
+        onAuthNavigate={handleNavigateToAuth}
+        onProfileNavigate={handleNavigateToProfile}
+        onTravelNavigate={handleBackToTravel}
+        currentView={currentView}
+      />
+      
+      <main className="container mx-auto px-4 py-8">
+        <Routes>
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/*" element={
+            <AnimatePresence mode="wait">
+              {/* Authentication Views */}
+              {currentView === 'login' && (
+          <motion.div
+            key="login"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Login 
+              onSuccess={handleAuthSuccess}
+              onSwitchToRegister={() => setCurrentView('register')}
+              onBack={handleBackToTravel}
+            />
+          </motion.div>
+        )}
 
-          {currentView === 'register' && (
-            <motion.div
-              key="register"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Register 
-                onSuccess={handleAuthSuccess}
-                onSwitchToLogin={() => setCurrentView('login')}
-                onBack={handleBackToTravel}
-              />
-            </motion.div>
-          )}
+        {currentView === 'register' && (
+          <motion.div
+            key="register"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Register 
+              onSuccess={handleAuthSuccess}
+              onSwitchToLogin={() => setCurrentView('login')}
+              onBack={handleBackToTravel}
+            />
+          </motion.div>
+        )}
 
-          {currentView === 'profile' && (
-            <motion.div
-              key="profile"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Profile onBack={handleBackToTravel} />
-            </motion.div>
-          )}
+        {currentView === 'profile' && (
+          <motion.div
+            key="profile"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Profile onBack={handleBackToTravel} />
+          </motion.div>
+        )}
 
-          {/* Travel Planning Views - Show for both authenticated and non-authenticated users */}
-          {currentView === 'travel' && (
-            <>
-              {currentStep === 1 && (
-                <motion.div
-                  key="form"
-                  initial={{ opacity: 0, x: -50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 50 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {isAuthenticated && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg"
-                    >
-                      <p className="text-green-800 text-center">
-                        Welcome back, {user?.name}! 🎉
-                      </p>
-                    </motion.div>
-                  )}
-                  <TravelForm 
-                    onSubmit={handleFormSubmit}
-                    initialData={formData}
-                  />
-                </motion.div>
-              )}
-              
-              {currentStep === 2 && (
-                <motion.div
-                  key="vibe"
-                  initial={{ opacity: 0, x: -50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 50 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <VibeSelector 
-                    onVibeSelect={handleVibeSelect}
-                    onBack={() => setCurrentStep(1)}
-                    formData={formData}
-                  />
-                </motion.div>
-              )}
-              
-              {currentStep === 3 && (
-                <motion.div
-                  key="results"
-                  initial={{ opacity: 0, x: -50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 50 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {loading ? (
-                    <LoadingSpinner />
-                  ) : (
-                    <Results 
-                      results={results}
-                      error={error}
-                      onReset={handleReset}
-                      formData={formData}
-                      selectedVibe={selectedVibe}
-                    />
-                  )}
-                </motion.div>
-              )}
-              </>
+        {/* Travel Planning Views - Show for both authenticated and non-authenticated users */}
+        {currentView === 'travel' && (
+          <>
+            {currentStep === 1 && (
+              <motion.div
+                key="form"
+                initial={{ opacity: 0, x: -50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 50 }}
+                transition={{ duration: 0.3 }}
+              >
+                {isAuthenticated && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg"
+                  >
+                    <p className="text-green-800 text-center">
+                      Welcome back, {user?.name}! 🎉
+                    </p>
+                  </motion.div>
+                )}
+                <TravelForm 
+                  onSubmit={handleFormSubmit}
+                  initialData={formData}
+                />
+              </motion.div>
             )}
-          </AnimatePresence>
-            } />
-          </Routes>
-        </main>
-      </div>
+            
+            {currentStep === 2 && (
+              <motion.div
+                key="vibe"
+                initial={{ opacity: 0, x: -50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 50 }}
+                transition={{ duration: 0.3 }}
+              >
+                <VibeSelector 
+                  onVibeSelect={handleVibeSelect}
+                  onBack={() => setCurrentStep(1)}
+                  formData={formData}
+                />
+              </motion.div>
+            )}
+            
+            {currentStep === 3 && (
+              <motion.div
+                key="results"
+                initial={{ opacity: 0, x: -50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 50 }}
+                transition={{ duration: 0.3 }}
+              >
+                {loading ? (
+                  <LoadingSpinner />
+                ) : (
+                  <Results 
+                    results={results}
+                    error={error}
+                    onReset={handleReset}
+                    formData={formData}
+                    selectedVibe={selectedVibe}
+                  />
+                )}
+              </motion.div>
+            )}
+            </>
+          )}
+        </AnimatePresence>
+          } />
+        </Routes>
+      </main>
+    </div>
+  )
+}
+
+// Main App component that provides the context
+function App() {
+  return (
+    <SubscriptionProvider>
+      <AppContent />
     </SubscriptionProvider>
   )
 }

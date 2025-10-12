@@ -111,13 +111,16 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 # Dependency to get current user
 async def get_current_user(token: str = Depends(oauth2_scheme)):
+    print(f"🔍 DEBUG: Received token: {token[:20]}..." if token else "🔍 DEBUG: No token received")
     email = verify_token(token)
     if email is None:
+        print(f"❌ DEBUG: Token verification failed for token: {token[:20]}..." if token else "❌ DEBUG: No token provided")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    print(f"✅ DEBUG: Token verified for email: {email}")
     
     user = users_collection.find_one({"email": email})
     if user is None:

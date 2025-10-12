@@ -150,6 +150,40 @@ const subscriptionApi = {
       throw error;
     }
   },
+
+  /**
+   * Manually upgrade to annual subscription for testing
+   * This bypasses Stripe payment and directly upgrades the user
+   * @param {string} tier - Target tier (explorer_annual or travel_pro)
+   */
+  async manualUpgradeAnnual(tier) {
+    try {
+      const response = await api.post('/api/payment/manual-upgrade-annual', {
+        tier,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error manually upgrading subscription:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Manually track a trip generation for testing purposes
+   * This allows you to manually increment trip usage
+   * @param {string} destination - Destination for the trip
+   */
+  async manualTrackTrip(destination) {
+    try {
+      const response = await api.post('/api/subscription/manual-track-trip', {
+        destination,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error manually tracking trip:', error);
+      throw error;
+    }
+  },
 };
 
 export default subscriptionApi;

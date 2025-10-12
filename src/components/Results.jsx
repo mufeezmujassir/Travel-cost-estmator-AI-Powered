@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { 
   Plane, 
@@ -26,12 +26,35 @@ import {
 } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import { useSubscription } from '../context/SubscriptionContext'
+import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import ImprovedCostsTab from './ImprovedCostsTab'
 const Results = ({ results, error, onReset, formData, selectedVibe }) => {
   const [activeTab, setActiveTab] = useState('overview')
   const { subscription, isPremium } = useSubscription()
+  const { isAuthenticated, loading: authLoading } = useAuth()
   const navigate = useNavigate()
+
+  // Redirect to login if user is not authenticated
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      navigate('/login')
+    }
+  }, [isAuthenticated, authLoading, navigate])
+
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg text-center"
+      >
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-700">Checking authentication...</p>
+      </motion.div>
+    )
+  }
 
   if (error) {
     return (
@@ -293,11 +316,16 @@ const OverviewTab = ({ results, formData, selectedVibe }) => {
   const isDomesticTravel = results?.is_domestic_travel || false
   const hasFlights = results?.flights && results.flights.length > 0
   const travelDistance = results?.travel_distance_km || 0
+  
+  
+  // For domestic travel, trust the backend flag completely
+  // The backend correctly identifies domestic vs international travel
+  const correctedIsDomesticTravel = isDomesticTravel
 
   return (
     <div className="space-y-6">
       {/* Travel Type Indicator for Domestic Travel */}
-      {isDomesticTravel && (
+      {correctedIsDomesticTravel && (
         <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
@@ -325,7 +353,7 @@ const OverviewTab = ({ results, formData, selectedVibe }) => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Conditionally show Flight or Transportation card */}
-        {!isDomesticTravel ? (
+        {!correctedIsDomesticTravel ? (
           (() => {
             // Find the actually cheapest flight (by price)
             const cheapestFlight = results?.flights?.length > 0
@@ -639,8 +667,11 @@ const FlightsTab = ({ results, formData }) => {
   const isDomesticTravel = results?.is_domestic_travel || false
   const hasFlights = results?.flights && results.flights.length > 0
   
+  // For domestic travel, trust the backend flag completely
+  const correctedIsDomesticTravel = isDomesticTravel
+  
   // Show domestic travel message if no flights
-  if (!hasFlights || isDomesticTravel) {
+  if (!hasFlights || correctedIsDomesticTravel) {
     return (
       <div className="space-y-6">
         <div className="card text-center py-16">
@@ -981,11 +1012,14 @@ const ItineraryTab = ({ results }) => (
 const CostsTab = ({ results, formData }) => {
   const isDomesticTravel = results?.is_domestic_travel || false
   const hasFlights = results?.flights && results.flights.length > 0
+  
+  // For domestic travel, trust the backend flag completely
+  const correctedIsDomesticTravel = isDomesticTravel
 
   return (
     <div className="space-y-6">
       {/* Domestic Travel Info */}
-      {isDomesticTravel && (
+      {correctedIsDomesticTravel && (
         <div className="card bg-green-50 border-2 border-green-200">
           <div className="flex items-center gap-3">
             <Info className="w-6 h-6 text-green-600 flex-shrink-0" />
@@ -1004,7 +1038,7 @@ const CostsTab = ({ results, formData }) => {
         
         <div className="space-y-4">
           {/* Show Flights OR Transportation based on travel type */}
-          {!isDomesticTravel && hasFlights ? (
+          {!correctedIsDomesticTravel && hasFlights ? (
             <div className="flex justify-between items-center py-2 border-b border-gray-200">
               <div className="flex items-center gap-2">
                 <Plane className="w-4 h-4 text-gray-500" />
@@ -1053,7 +1087,7 @@ const CostsTab = ({ results, formData }) => {
             <span className="font-semibold">${(results?.cost_breakdown?.accommodation || 0).toFixed(2)}</span>
           </div>
           
-          {!isDomesticTravel && (
+          {!correctedIsDomesticTravel && (
             <div className="flex justify-between items-center py-2 border-b border-gray-200">
               <div className="flex items-center gap-2">
                 <Car className="w-4 h-4 text-gray-500" />
@@ -1105,7 +1139,7 @@ const CostsTab = ({ results, formData }) => {
       </div>
 
       {/* Savings indicator for domestic travel */}
-      {isDomesticTravel && (
+      {correctedIsDomesticTravel && (
         <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200">
           <div className="text-center py-4">
             <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-3">

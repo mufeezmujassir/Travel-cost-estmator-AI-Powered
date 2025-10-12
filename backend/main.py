@@ -151,6 +151,41 @@ async def lifespan(app: FastAPI):
     await orchestrator.initialize()
     print("✅ All agents initialized successfully!")
     
+    # Initialize subscription services
+    print("💳 Initializing subscription system...")
+    try:
+        from services.subscription_service import SubscriptionService
+        from services.region_resolver import RegionResolver
+        import routes.subscription_routes
+        import routes.payment_routes
+        
+        # Initialize RegionResolver for SubscriptionService
+        region_resolver = RegionResolver(settings.serp_api_key)
+        subscription_svc = SubscriptionService(region_resolver)
+        
+        # Set global service instances using module-level assignment
+        routes.subscription_routes.subscription_service = subscription_svc
+        routes.payment_routes.subscription_service = subscription_svc
+        print("✅ Subscription service initialized")
+        
+        # Initialize Stripe service if keys are available
+        if settings.stripe_secret_key:
+            from services.stripe_service import StripeService
+            stripe_svc = StripeService(
+                secret_key=settings.stripe_secret_key,
+                webhook_secret=settings.stripe_webhook_secret,
+                mode=settings.stripe_mode
+            )
+            routes.payment_routes.stripe_service = stripe_svc
+            print("✅ Stripe service initialized")
+        else:
+            print("⚠️  Stripe keys not configured - payments disabled")
+            
+    except Exception as e:
+        print(f"⚠️  Failed to initialize subscription services: {e}")
+        import traceback
+        traceback.print_exc()
+    
     # Check MongoDB connection for user management
     if users_collection is not None:
         try:
@@ -187,6 +222,14 @@ app.add_middleware(
 # Create logger
 logger = logging.getLogger("travel_api")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+
+# Import and include subscription and payment routes
+from routes.subscription_routes import router as subscription_router
+from routes.payment_routes import router as payment_router
+
+# Include routers
+app.include_router(subscription_router)
+app.include_router(payment_router)
 
 # User Management Endpoints
 @app.post("/auth/register", response_model=UserResponse)
@@ -388,6 +431,24 @@ async def estimate_travel(
         logger.info("💭 Vibe: %s", request.vibe)        
         # Process the travel request through all agents
         result = await orchestrator.process_travel_request(request)
+        
+        # Track trip generation for subscription usage
+        try:
+            from middleware.subscription_middleware import get_subscription_middleware
+            from services.subscription_service import SubscriptionService
+            from services.region_resolver import RegionResolver
+            
+            # Get subscription service instance
+            region_resolver = RegionResolver(settings.serp_api_key)
+            subscription_service = SubscriptionService(region_resolver)
+            subscription_middleware = await get_subscription_middleware(subscription_service)
+            
+            # Track the trip generation
+            await subscription_middleware.track_trip_generation(current_user, request.destination)
+            logger.info(f"✅ Tracked trip generation for user {current_user.id} to {request.destination}")
+            
+        except Exception as e:
+            logger.warning(f"⚠️  Failed to track trip generation: {e}")
         
         logger.info("✅ Travel estimation completed successfully for user: %s", current_user.email)
         return result

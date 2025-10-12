@@ -276,7 +276,81 @@ class AirportResolver:
                 return code
         
         return None
-    
+
+    def _normalize_country_name(self, country: str) -> str:
+        """
+        Normalize country names to English equivalents.
+        Maps common non-English country names to English.
+        """
+        # Common country name mappings (non-English → English)
+        country_mappings = {
+            # Chinese
+            "中国": "China",
+            "中华人民共和国": "China",
+            "中华": "China",
+            
+            # Japanese
+            "日本": "Japan",
+            "日本国": "Japan",
+            
+            # Korean
+            "대한민국": "South Korea",
+            "한국": "South Korea",
+            "조선민주주의인민공화국": "North Korea",
+            "북한": "North Korea",
+            
+            # Arabic
+            "المملكة العربية السعودية": "Saudi Arabia",
+            "السعودية": "Saudi Arabia",
+            "مصر": "Egypt",
+            "الإمارات العربية المتحدة": "United Arab Emirates",
+            
+            # Russian
+            "Российская Федерация": "Russia",
+            "Россия": "Russia",
+            "Российская Советская Федеративная Социалистическая Республика": "Russia",
+            
+            # French
+            "République française": "France",
+            "France": "France",
+            
+            # German
+            "Bundesrepublik Deutschland": "Germany",
+            "Deutschland": "Germany",
+            
+            # Spanish
+            "Reino de España": "Spain",
+            "España": "Spain",
+            "Estados Unidos Mexicanos": "Mexico",
+            "México": "Mexico",
+            
+            # Portuguese
+            "República Federativa do Brasil": "Brazil",
+            "Brasil": "Brazil",
+            
+            # Italian
+            "Repubblica Italiana": "Italy",
+            "Italia": "Italy",
+            
+            # Dutch
+            "Koninkrijk der Nederlanden": "Netherlands",
+            "Nederland": "Netherlands",
+            
+            # Other common mappings
+            "United Kingdom": "United Kingdom",
+            "UK": "United Kingdom",
+            "Great Britain": "United Kingdom",
+            "USA": "United States",
+            "United States of America": "United States",
+            "US": "United States",
+        }
+        
+        # Check if we have a mapping
+        normalized = country_mappings.get(country, country)
+        
+        # If no mapping found, return the original country name
+        return normalized
+
     def _validate_airport_code(self, code: str) -> bool:
         """Validate if a code looks like a real airport code"""
         # Exclude common false positives
@@ -341,8 +415,10 @@ class AirportResolver:
                         parts = display_name.split(", ")
                         if parts:
                             country = parts[-1].strip()
-                            print(f"🌍 Detected country for '{city}': {country}")
-                            return country
+                            # Normalize country name to English
+                            normalized_country = self._normalize_country_name(country)
+                            print(f"🌍 Detected country for '{city}': {country} → {normalized_country}")
+                            return normalized_country
         except Exception as e:
             print(f"⚠️ Error detecting country for '{city}': {e}")
         

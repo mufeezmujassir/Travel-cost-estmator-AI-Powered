@@ -275,6 +275,7 @@ async def manual_activate_trip_pass(
     This is a temporary endpoint for testing when webhooks aren't working.
     """
     try:
+        logger.info(f"🔍 DEBUG: Manual trip pass activation request from user {current_user.id} for destination: {request.destination}")
         # Activate trip pass manually
         success = await subscription_svc.activate_trip_pass(
             current_user.id,
@@ -297,6 +298,125 @@ async def manual_activate_trip_pass(
             
     except Exception as e:
         logger.error(f"❌ Error manually activating trip pass: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to activate trip pass: {str(e)}"
+        )
+
+@router.post("/manual-upgrade-annual")
+async def manual_upgrade_annual(
+    request: dict,  # {"tier": "explorer_annual" or "travel_pro"}
+    current_user: UserResponse = Depends(get_current_user),
+    subscription_svc: SubscriptionService = Depends(get_subscription_service)
+):
+    """
+    Manually upgrade to annual subscription for testing.
+    This bypasses Stripe payment and directly upgrades the user.
+    """
+    try:
+        tier_str = request.get("tier")
+        if not tier_str:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing tier parameter"
+            )
+        
+        # Validate tier
+        from models.subscription_models import SubscriptionTier
+        try:
+            tier = SubscriptionTier(tier_str)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid tier: {tier_str}"
+            )
+        
+        # Only allow annual tiers
+        if tier not in [SubscriptionTier.EXPLORER_ANNUAL, SubscriptionTier.TRAVEL_PRO]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only annual tiers are supported for this endpoint"
+            )
+        
+        # Upgrade user subscription
+        success = await subscription_svc.upgrade_to_annual(
+            current_user.id,
+            tier,
+            "manual_upgrade_test"  # Placeholder Stripe subscription ID
+        )
+        
+        if success:
+            logger.info(f"✅ Manually upgraded user {current_user.id} to {tier.value}")
+            return {
+                "message": f"Successfully upgraded to {tier.value}",
+                "tier": tier.value,
+                "status": "active"
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to upgrade subscription"
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error manually upgrading subscription: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upgrade subscription: {str(e)}"
+        )
+
+@router.post("/test-trip-pass")
+async def test_trip_pass_activation(request: dict):
+    """
+    Test endpoint for trip pass activation without authentication
+    This is for debugging purposes only
+    """
+    try:
+        destination = request.get("destination")
+        user_email = request.get("user_email")
+        
+        if not destination or not user_email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing destination or user_email"
+            )
+        
+        # Find user by email
+        from models.user import users_collection
+        user = users_collection.find_one({"email": user_email})
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        # Get subscription service
+        subscription_svc = get_subscription_service()
+        
+        # Activate trip pass
+        success = await subscription_svc.activate_trip_pass(
+            str(user["_id"]),
+            destination,
+            "test_activation"
+        )
+        
+        if success:
+            logger.info(f"✅ Test trip pass activated for {user_email} - Destination: {destination}")
+            return {
+                "message": "Trip pass activated successfully",
+                "destination": destination,
+                "status": "active"
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to activate trip pass"
+            )
+            
+    except Exception as e:
+        logger.error(f"❌ Error in test trip pass activation: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to activate trip pass: {str(e)}"

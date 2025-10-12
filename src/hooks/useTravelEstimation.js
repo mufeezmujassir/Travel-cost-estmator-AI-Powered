@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { travelAPI } from '../services/api'
 
-export const useTravelEstimation = () => {
+export const useTravelEstimation = (refreshSubscription = null) => {
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState(null)
   const [error, setError] = useState(null)
@@ -31,6 +31,16 @@ export const useTravelEstimation = () => {
       console.log('✅ Travel estimation successful:', response.data);
       setResults(response.data);
       toast.success('Travel plan generated successfully!');
+      
+      // Refresh subscription data to update trip usage (if provided)
+      if (refreshSubscription) {
+        try {
+          await refreshSubscription();
+          console.log('✅ Subscription data refreshed after trip generation');
+        } catch (refreshError) {
+          console.warn('⚠️ Failed to refresh subscription data:', refreshError);
+        }
+      }
       
       return { success: true, data: response.data };
       

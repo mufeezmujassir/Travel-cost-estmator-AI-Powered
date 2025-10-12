@@ -102,6 +102,28 @@ const PricingPage = () => {
     }
   };
 
+  const handleTestUpgrade = async (tier) => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    if (tier.tier === 'trip_pass') {
+      // For trip pass, show destination modal for test
+      setSelectedTier(tier);
+      setShowDestinationModal(true);
+    } else if (tier.tier === 'explorer_annual' || tier.tier === 'travel_pro') {
+      try {
+        const result = await subscriptionApi.manualUpgradeAnnual(tier.tier);
+        alert(`${tier.name} activated successfully!`);
+        window.location.reload();
+      } catch (error) {
+        console.error('Test upgrade failed:', error);
+        alert('Failed to activate upgrade. Please try again.');
+      }
+    }
+  };
+
   const getTierIcon = (tierName) => {
     switch (tierName) {
       case 'trip_pass':
@@ -131,7 +153,25 @@ const PricingPage = () => {
   };
 
   const isCurrentTier = (tierName) => {
+    if (tierName === 'trip_pass') {
+      // For Trip Pass, check if user has any active Trip Passes
+      const hasActiveTripPass = subscription?.active_trip_passes?.some(pass => pass.is_active);
+      return hasActiveTripPass;
+    }
     return subscription?.tier === tierName;
+  };
+
+  const getTripPassButtonText = () => {
+    const hasActiveTripPass = subscription?.active_trip_passes?.some(pass => pass.is_active);
+    if (hasActiveTripPass) {
+      const activePasses = subscription.active_trip_passes.filter(pass => pass.is_active);
+      if (activePasses.length === 1) {
+        return `Active for ${activePasses[0].destination}`;
+      } else {
+        return `Active for ${activePasses.length} destinations`;
+      }
+    }
+    return 'Get Started';
   };
 
   if (loading || subLoading) {
@@ -240,8 +280,35 @@ const PricingPage = () => {
                   )}
                 </ul>
 
-                {/* CTA Button */}
-                {isCurrentTier(tier.tier) ? (
+                {/* CTA Buttons */}
+                {tier.tier === 'trip_pass' ? (
+                  // Special handling for Trip Pass - always allow purchase
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => handlePurchase(tier)}
+                      disabled={processingTier === 'trip_pass'}
+                      className={`w-full py-3 px-4 rounded-lg font-semibold transition ${
+                        processingTier === 'trip_pass'
+                          ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
+                    >
+                      {processingTier === 'trip_pass' ? 'Processing...' : getTripPassButtonText()}
+                    </button>
+                    {/* Test Button for Trip Pass */}
+                    <button
+                      onClick={() => handleTestUpgrade(tier)}
+                      className="w-full py-2 px-4 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition"
+                    >
+                      Test (No Payment)
+                    </button>
+                    {subscription?.active_trip_passes?.some(pass => pass.is_active) && (
+                      <p className="text-xs text-gray-500 text-center">
+                        Buy additional Trip Passes for other destinations
+                      </p>
+                    )}
+                  </div>
+                ) : isCurrentTier(tier.tier) ? (
                   <button
                     disabled
                     className="w-full py-3 px-4 bg-gray-300 text-gray-600 rounded-lg font-semibold cursor-not-allowed"
@@ -256,13 +323,22 @@ const PricingPage = () => {
                     Get Started
                   </button>
                 ) : (
-                  <button
-                    onClick={() => handlePurchase(tier)}
-                    disabled={processingTier === tier.tier}
-                    className={`w-full py-3 px-4 bg-gradient-to-r ${getTierColor(tier.tier)} text-white rounded-lg font-semibold hover:shadow-lg transition disabled:opacity-50`}
-                  >
-                    {processingTier === tier.tier ? 'Processing...' : 'Get Started'}
-                  </button>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => handlePurchase(tier)}
+                      disabled={processingTier === tier.tier}
+                      className={`w-full py-3 px-4 bg-gradient-to-r ${getTierColor(tier.tier)} text-white rounded-lg font-semibold hover:shadow-lg transition disabled:opacity-50`}
+                    >
+                      {processingTier === tier.tier ? 'Processing...' : 'Get Started'}
+                    </button>
+                    {/* Test Button */}
+                    <button
+                      onClick={() => handleTestUpgrade(tier)}
+                      className="w-full py-2 px-4 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition"
+                    >
+                      Test (No Payment)
+                    </button>
+                  </div>
                 )}
               </div>
             </motion.div>

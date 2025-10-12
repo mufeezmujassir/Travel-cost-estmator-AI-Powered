@@ -508,6 +508,12 @@ class TravelOrchestrator:
             state["cost_breakdown"].miscellaneous
         ])
         
+        # Debug logging for domestic travel flag
+        is_domestic = state.get("is_domestic_travel", False)
+        print(f"🔍 DEBUG: Final is_domestic_travel flag: {is_domestic}")
+        print(f"🔍 DEBUG: State keys: {list(state.keys())}")
+        print(f"🔍 DEBUG: Full state: {state}")
+        
         return TravelResponse(
             request_id=str(uuid.uuid4()),
             flights=state["flights"],
@@ -520,7 +526,7 @@ class TravelOrchestrator:
             vibe_analysis=state["emotional_analysis"],
             price_trends=state.get("price_trends") if state.get("price_trends") else None,
             transportation=state.get("transportation"),  # Include transportation data
-            is_domestic_travel=state.get("is_domestic_travel", False),  # Include domestic travel flag
+            is_domestic_travel=is_domestic,  # Include domestic travel flag
             travel_distance_km=state.get("travel_distance_km", 0.0),  # Include distance
             generated_at=datetime.now()
         )

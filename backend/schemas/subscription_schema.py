@@ -11,6 +11,7 @@ class SubscriptionResponse(BaseModel):
     expires_at: Optional[datetime] = None
     active_trip_passes: List[TripPass] = []
     usage_stats: UsageStats
+    allowed_vibes: List[str] = Field(default_factory=list, description="List of allowed vibe IDs for this tier")
     is_premium: bool = Field(..., description="Whether user has any premium tier")
     can_generate_trip: bool = Field(..., description="Whether user can generate a trip now")
     stripe_customer_id: Optional[str] = None

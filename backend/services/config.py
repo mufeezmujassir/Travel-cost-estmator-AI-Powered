@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     serp_api_key: str = Field(default="", description="SERP API key for search data")
     google_maps_api_key: str = Field(default="", description="Google Maps API key for location services")
     
+    # Stripe Configuration
+    stripe_secret_key: str = Field(default="", description="Stripe secret API key")
+    stripe_publishable_key: str = Field(default="", description="Stripe publishable key")
+    stripe_webhook_secret: str = Field(default="", description="Stripe webhook signing secret")
+    stripe_mode: str = Field(default="test", description="Stripe mode: test or live")
+    
     # Database
     database_url: str = Field(
         default="sqlite:///./travel_estimator.db", 

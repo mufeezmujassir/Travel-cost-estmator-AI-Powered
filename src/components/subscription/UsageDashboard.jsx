@@ -6,10 +6,38 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSubscription } from '../../context/SubscriptionContext';
+import subscriptionApi from '../../services/subscriptionApi';
 
 const UsageDashboard = () => {
-  const { subscription, usageStats, getCurrentTierName, isPremium, loading } = useSubscription();
+  const { subscription, usageStats, getCurrentTierName, isPremium, loading, refreshSubscription } = useSubscription();
   const navigate = useNavigate();
+
+  const handleManualUpgrade = async (tier) => {
+    try {
+      const result = await subscriptionApi.manualUpgradeAnnual(tier);
+      alert(`Successfully upgraded to ${tier.replace('_', ' ')}!`);
+      // Refresh subscription data
+      await refreshSubscription();
+    } catch (error) {
+      console.error('Manual upgrade failed:', error);
+      alert('Failed to upgrade subscription. Please try again.');
+    }
+  };
+
+  const handleManualTrackTrip = async () => {
+    const destination = prompt('Enter destination for trip tracking:');
+    if (destination) {
+      try {
+        const result = await subscriptionApi.manualTrackTrip(destination);
+        alert(`Trip to ${destination} tracked successfully!`);
+        // Refresh subscription data
+        await refreshSubscription();
+      } catch (error) {
+        console.error('Manual trip tracking failed:', error);
+        alert('Failed to track trip. Please try again.');
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -93,12 +121,20 @@ const UsageDashboard = () => {
             </button>
           )}
           {subscription.tier === 'trip_pass' && (
-            <button
-              onClick={() => navigate('/pricing')}
-              className="bg-white text-gray-900 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition"
-            >
-              Upgrade to Annual
-            </button>
+            <div className="space-y-2">
+              <button
+                onClick={() => handleManualUpgrade('explorer_annual')}
+                className="w-full bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition"
+              >
+                Upgrade (Test)
+              </button>
+              <button
+                onClick={() => navigate('/pricing')}
+                className="w-full bg-white text-gray-900 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition"
+              >
+                Pay with Stripe
+              </button>
+            </div>
           )}
         </div>
 
@@ -191,6 +227,12 @@ const UsageDashboard = () => {
               <Clock className="w-4 h-4 inline mr-1" />
               Your yearly limits reset in <strong>{usageStats.days_until_reset} days</strong>
             </p>
+            <button
+              onClick={handleManualTrackTrip}
+              className="mt-2 bg-green-600 text-white px-3 py-1 rounded text-sm font-semibold hover:bg-green-700 transition"
+            >
+              Track Trip (Test)
+            </button>
           </div>
         )}
       </motion.div>
@@ -256,6 +298,65 @@ const UsageDashboard = () => {
         </motion.div>
       )}
 
+      {/* Upgrade Options for Explorer Annual Users */}
+      {subscription.tier === 'explorer_annual' && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-white rounded-xl shadow-lg p-6 border border-gray-200"
+        >
+          <h3 className="text-xl font-bold text-gray-900 mb-4">Upgrade to Travel Pro</h3>
+          <p className="text-gray-600 mb-6">
+            You're currently on Explorer Annual with 3 trips per year to ANY destination. Upgrade to Travel Pro for unlimited trips to ANY destination and premium features!
+          </p>
+          
+          <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-lg p-4 border border-amber-200">
+            <div className="flex items-center mb-3">
+              <Crown className="w-5 h-5 text-amber-600 mr-2" />
+              <h4 className="font-bold text-gray-900">Travel Pro</h4>
+              <span className="ml-auto bg-amber-200 text-amber-800 px-2 py-1 rounded-full text-xs font-semibold">
+                Recommended
+              </span>
+            </div>
+            <p className="text-2xl font-bold text-amber-600 mb-2">$149/year</p>
+              <ul className="text-sm text-gray-600 space-y-1 mb-4">
+                <li>• UNLIMITED trip estimates to ANY destination (vs 3 per year)</li>
+                <li>• All premium features</li>
+                <li>• Up to 10 flight & hotel options (vs 5)</li>
+                <li>• Extended 60-day itinerary (vs 30 days)</li>
+                <li>• Multi-city trip planning</li>
+                <li>• API access & white-label PDFs</li>
+                <li>• Priority support</li>
+              </ul>
+            <div className="space-y-2">
+              <button
+                onClick={() => handleManualUpgrade('travel_pro')}
+                className="w-full bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition"
+              >
+                Upgrade (Test)
+              </button>
+              <button
+                onClick={() => navigate('/pricing')}
+                className="w-full bg-amber-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-amber-700 transition"
+              >
+                Pay with Stripe
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-4 text-center">
+            <button
+              onClick={() => navigate('/pricing')}
+              className="text-blue-600 hover:text-blue-700 font-medium inline-flex items-center"
+            >
+              View All Plans
+              <ArrowRight className="w-4 h-4 ml-1" />
+            </button>
+          </div>
+        </motion.div>
+      )}
+
       {/* Upgrade Options for Trip Pass Users */}
       {subscription.tier === 'trip_pass' && (
         <motion.div
@@ -266,7 +367,7 @@ const UsageDashboard = () => {
         >
           <h3 className="text-xl font-bold text-gray-900 mb-4">Upgrade to Annual Plans</h3>
           <p className="text-gray-600 mb-6">
-            Your Trip Pass is great for single destinations, but annual plans give you unlimited access to plan trips anywhere in the world!
+            Your Trip Pass is great for one destination, but annual plans give you access to plan trips to ANY destination in the world!
           </p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -278,17 +379,25 @@ const UsageDashboard = () => {
               </div>
               <p className="text-2xl font-bold text-purple-600 mb-2">$59/year</p>
               <ul className="text-sm text-gray-600 space-y-1 mb-4">
-                <li>• 3 complete trip estimates per year</li>
+                <li>• 3 complete trip estimates per year to ANY destination</li>
                 <li>• All 7 travel vibes available</li>
                 <li>• Up to 5 flight & hotel options</li>
                 <li>• Full 30-day itinerary</li>
               </ul>
-              <button
-                onClick={() => navigate('/pricing')}
-                className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700 transition"
-              >
-                Upgrade Now
-              </button>
+              <div className="space-y-2">
+                <button
+                  onClick={() => handleManualUpgrade('explorer_annual')}
+                  className="w-full bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition"
+                >
+                  Upgrade (Test)
+                </button>
+                <button
+                  onClick={() => navigate('/pricing')}
+                  className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700 transition"
+                >
+                  Pay with Stripe
+                </button>
+              </div>
             </div>
 
             {/* Travel Pro */}
@@ -299,17 +408,25 @@ const UsageDashboard = () => {
               </div>
               <p className="text-2xl font-bold text-amber-600 mb-2">$149/year</p>
               <ul className="text-sm text-gray-600 space-y-1 mb-4">
-                <li>• UNLIMITED trip estimates</li>
+                <li>• UNLIMITED trip estimates to ANY destination</li>
                 <li>• All premium features</li>
                 <li>• Up to 10 flight & hotel options</li>
                 <li>• Extended 60-day itinerary</li>
               </ul>
-              <button
-                onClick={() => navigate('/pricing')}
-                className="w-full bg-amber-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-amber-700 transition"
-              >
-                Upgrade Now
-              </button>
+              <div className="space-y-2">
+                <button
+                  onClick={() => handleManualUpgrade('travel_pro')}
+                  className="w-full bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition"
+                >
+                  Upgrade (Test)
+                </button>
+                <button
+                  onClick={() => navigate('/pricing')}
+                  className="w-full bg-amber-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-amber-700 transition"
+                >
+                  Pay with Stripe
+                </button>
+              </div>
             </div>
           </div>
 
