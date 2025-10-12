@@ -397,3 +397,4 @@ class SerpService:
             "search_info": data.get("search_information", {}),
             "processed": True,
         }
+    
