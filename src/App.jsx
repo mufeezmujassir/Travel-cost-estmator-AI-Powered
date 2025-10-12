@@ -9,6 +9,7 @@ import Login from './components/auth/Login'
 import Register from './components/auth/Register'
 import Profile from './components/auth/Profile'
 import Aboutus from './components/aboutus'
+import ChatWidget from './components/ChatWidget'
 import { useTravelEstimation } from './hooks/useTravelEstimation'
 import { useAuth } from './context/AuthContext'
 import { SubscriptionProvider } from './context/SubscriptionContext'
@@ -244,6 +245,7 @@ function App() {
             )}
           </AnimatePresence>
         </main>
+         <ChatWidget />
       </div>
     </SubscriptionProvider>
   )
