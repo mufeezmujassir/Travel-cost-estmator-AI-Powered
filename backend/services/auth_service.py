@@ -8,6 +8,8 @@ from datetime import datetime
 import os
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+# Optional scheme that does not raise when token is missing
+optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 
 class AuthService:
     
@@ -266,3 +268,30 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         subscriptionId=user.get("subscriptionId"),
         generationsRemaining=user.get("generationsRemaining", 1)
     )
+
+# Optional current user that returns None when no/invalid token is provided
+async def get_optional_current_user(token: str | None = Depends(optional_oauth2_scheme)):
+    if not token:
+        return None
+    try:
+        email = verify_token(token)
+        if email is None:
+            return None
+        user = users_collection.find_one({"email": email})
+        if user is None:
+            return None
+        return UserResponse(
+            id=str(user["_id"]),
+            name=user["name"],
+            email=user["email"],
+            created_at=user["created_at"],
+            type=user.get("type", "basic"),
+            hasUsedFreePlan=user.get("hasUsedFreePlan", False),
+            subscriptionStatus=user.get("subscriptionStatus", "expired"),
+            subscriptionEndDate=user.get("subscriptionEndDate"),
+            stripeCustomerId=user.get("stripeCustomerId"),
+            subscriptionId=user.get("subscriptionId"),
+            generationsRemaining=user.get("generationsRemaining", 1)
+        )
+    except Exception:
+        return None

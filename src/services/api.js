@@ -54,6 +54,9 @@ export const travelAPI = {
   getSeasonRecommendation: (vibe, destination, startDate) => 
     api.get(`/api/season-recommendation?vibe=${vibe}&destination=${destination}&start_date=${startDate}`),
   getPublicVibes: () => axios.get(`${API_BASE_URL}/public/vibes`), // Public endpoint, no auth needed
+  listTrips: () => api.get('/api/trips/'),
+  getTrip: (id) => api.get(`/api/trips/${id}`),
+  deleteTrip: (id) => api.delete(`/api/trips/${id}`),
 };
 
 // Subscription APIs

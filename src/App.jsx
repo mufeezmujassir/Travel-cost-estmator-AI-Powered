@@ -105,6 +105,22 @@ function App() {
     setCurrentView('travel')
   }
 
+  // Expose minimal context for ChatWidget to consume
+  try {
+    window.appCurrentView = currentView
+    window.appFormSummary = {
+      origin: formData.origin,
+      destination: formData.destination,
+      startDate: formData.startDate,
+      returnDate: formData.returnDate,
+      travelers: formData.travelers,
+      budget: formData.budget,
+      selectedVibe: selectedVibe?.name || selectedVibe?.id || null
+    }
+    // Expose last estimation results for chatbot summarization
+    window.appLastResults = results || null
+  } catch (_) {}
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">

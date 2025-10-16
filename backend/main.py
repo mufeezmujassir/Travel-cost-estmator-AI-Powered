@@ -14,6 +14,7 @@ from passlib.context import CryptContext
 
 from agents.travel_orchestrator import TravelOrchestrator
 from models.travel_models import TravelRequest, TravelResponse
+from models.travel_history import travel_plans_collection
 from services.config import Settings
 from services.auth_service import get_current_user, AuthService
 from schemas.user_schema import UserResponse
@@ -22,6 +23,7 @@ from schemas.user_schema import UserResponse
 from routes.auth_routes import router as auth_router
 from routes.subscription_routes import router as subscription_router
 from routes.chat_routes import router as chat_router
+from routes.trips_routes import router as trips_router
 
 
 
@@ -195,6 +197,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(subscription_router)
 app.include_router(chat_router)
+app.include_router(trips_router)
 
 
 # Create logger
@@ -425,6 +428,19 @@ async def estimate_travel(
         logger.info("💭 Vibe: %s", request.vibe)        
         # Process the travel request through all agents
         result = await orchestrator.process_travel_request(request)
+
+        # Save travel plan to history
+        try:
+            if travel_plans_collection is not None:
+                plan_doc = result.dict()
+                plan_doc.update({
+                    "userId": current_user.id,
+                    "generated_at": datetime.utcnow(),
+                })
+                travel_plans_collection.insert_one(plan_doc)
+        except Exception as e:
+            # Do not fail the request if history save fails
+            logging.warning(f"Failed to save travel plan history: {e}")
 
         await AuthService.use_generation(current_user.id)
 
