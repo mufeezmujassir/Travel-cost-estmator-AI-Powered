@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional
 import logging
 
 from services.pdf_generator import TravelPlanPDFGenerator
-from services.auth_service import get_current_user
+from services.auth_service import get_optional_current_user
 from schemas.user_schema import UserResponse
 
 router = APIRouter()
@@ -19,7 +19,7 @@ pdf_generator = TravelPlanPDFGenerator()
 
 @router.get("/generate-pdf")
 async def generate_travel_pdf(
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: Optional[UserResponse] = Depends(get_optional_current_user)
 ):
     """
     Generate PDF for the user's latest travel plan
@@ -117,12 +117,15 @@ async def generate_travel_pdf(
         # Generate PDF
         pdf_bytes = pdf_generator.generate_pdf(sample_travel_data)
         
+        # Build filename; if user is anonymous, omit email
+        user_prefix = current_user.email if current_user else "anonymous"
+
         # Return PDF as response
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
             headers={
-                "Content-Disposition": f"attachment; filename=travel_plan_{current_user.email}_{sample_travel_data['search_criteria']['destination']}.pdf"
+                "Content-Disposition": f"attachment; filename=travel_plan_{user_prefix}_{sample_travel_data['search_criteria']['destination']}.pdf"
             }
         )
         
@@ -133,7 +136,7 @@ async def generate_travel_pdf(
 @router.post("/generate-pdf-from-data")
 async def generate_pdf_from_data(
     travel_data: Dict[str, Any],
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: Optional[UserResponse] = Depends(get_optional_current_user)
 ):
     """
     Generate PDF from provided travel data
@@ -149,12 +152,15 @@ async def generate_pdf_from_data(
         # Get destination for filename
         destination = travel_data.get('search_criteria', {}).get('destination', 'travel_plan')
         
+        # Build filename; include destination and optional user email
+        user_part = f"_{current_user.email}" if current_user else ""
+
         # Return PDF as response
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
             headers={
-                "Content-Disposition": f"attachment; filename=travel_plan_{destination}.pdf"
+                "Content-Disposition": f"attachment; filename=travel_plan{user_part}_{destination}.pdf"
             }
         )
         
