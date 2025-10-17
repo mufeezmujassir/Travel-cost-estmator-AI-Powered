@@ -23,8 +23,53 @@ import {
 } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import ImprovedCostsTab from './ImprovedCostsTab'
+import { useAuth } from '../context/AuthContext'
 const Results = ({ results, error, onReset, formData, selectedVibe }) => {
   const [activeTab, setActiveTab] = useState('overview')
+  const [isDownloadingPDF, setIsDownloadingPDF] = useState(false)
+  const { token } = useAuth()
+
+  const handleDownloadPDF = async () => {
+    if (!results || !token) {
+      alert('Please generate a travel plan first and ensure you are logged in.')
+      return
+    }
+
+    setIsDownloadingPDF(true)
+    try {
+      const response = await fetch('/api/generate-pdf-from-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(results)
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF')
+      }
+
+      // Get the PDF blob
+      const blob = await response.blob()
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `travel_plan_${formData.destination}_${new Date().toISOString().split('T')[0]}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      
+    } catch (error) {
+      console.error('Error downloading PDF:', error)
+      alert('Failed to download PDF. Please try again.')
+    } finally {
+      setIsDownloadingPDF(false)
+    }
+  }
 
   if (error) {
     return (
@@ -107,9 +152,13 @@ const Results = ({ results, error, onReset, formData, selectedVibe }) => {
           <Share2 className="w-4 h-4 inline mr-2" />
           Share
         </button>
-        <button className="btn-secondary">
+        <button 
+          onClick={handleDownloadPDF}
+          disabled={isDownloadingPDF || !results}
+          className={`btn-secondary ${isDownloadingPDF || !results ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
           <Download className="w-4 h-4 inline mr-2" />
-          Download PDF
+          {isDownloadingPDF ? 'Generating...' : 'Download PDF'}
         </button>
         <button onClick={onReset} className="btn-primary">
           <ArrowLeft className="w-4 h-4 inline mr-2" />
