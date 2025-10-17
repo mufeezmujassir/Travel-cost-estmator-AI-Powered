@@ -24,6 +24,7 @@ from routes.auth_routes import router as auth_router
 from routes.subscription_routes import router as subscription_router
 from routes.chat_routes import router as chat_router
 from routes.trips_routes import router as trips_router
+from services.stripe_service import StripeService
 
 
 
@@ -199,7 +200,14 @@ app.include_router(subscription_router)
 app.include_router(chat_router)
 app.include_router(trips_router)
 
-
+@app.post("/webhook")
+async def stripe_root_webhook(request: Request):
+    """Root-level Stripe webhook endpoint (alias for /subscription/webhook)
+    This accepts events sent to /webhook and forwards them to the StripeService
+    """
+    payload = await request.body()
+    sig_header = request.headers.get('stripe-signature')
+    return await StripeService.handle_webhook(payload, sig_header)
 # Create logger
 logger = logging.getLogger("travel_api")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
