@@ -24,6 +24,8 @@ from routes.auth_routes import router as auth_router
 from routes.subscription_routes import router as subscription_router
 from routes.chat_routes import router as chat_router
 from routes.trips_routes import router as trips_router
+from routes.suitability_routes import router as suitability_router
+from routes.pdf_routes import router as pdf_router
 
 
 
@@ -198,6 +200,8 @@ app.include_router(auth_router)
 app.include_router(subscription_router)
 app.include_router(chat_router)
 app.include_router(trips_router)
+app.include_router(suitability_router)
+app.include_router(pdf_router)
 
 
 # Create logger
