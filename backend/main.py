@@ -17,6 +17,7 @@ from models.travel_models import TravelRequest, TravelResponse
 from services.config import Settings
 from services.auth_service import get_current_user, AuthService
 from schemas.user_schema import UserResponse
+from services.stripe_service import StripeService
 
 # Import routers
 from routes.auth_routes import router as auth_router
@@ -192,6 +193,16 @@ app.add_middleware(
 )
 app.include_router(auth_router)
 app.include_router(subscription_router)
+
+
+@app.post("/webhook")
+async def stripe_root_webhook(request: Request):
+    """Root-level Stripe webhook endpoint (alias for /subscription/webhook)
+    This accepts events sent to /webhook and forwards them to the StripeService
+    """
+    payload = await request.body()
+    sig_header = request.headers.get('stripe-signature')
+    return await StripeService.handle_webhook(payload, sig_header)
 
 # Create logger
 logger = logging.getLogger("travel_api")
