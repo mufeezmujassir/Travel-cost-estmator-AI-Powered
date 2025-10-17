@@ -35,6 +35,55 @@ const Results = ({ results, error, onReset, formData, selectedVibe }) => {
       return
     }
 
+    // Build payload expected by the PDF service
+    const pdfPayload = {
+      search_criteria: {
+        origin: formData?.origin || 'Unknown',
+        destination: formData?.destination || 'Unknown',
+        departure_date: formData?.startDate || '',
+        return_date: formData?.returnDate || '',
+        travelers: formData?.travelers || 1,
+        vibe: (selectedVibe?.id || selectedVibe?.name || 'general').toString().toLowerCase()
+      },
+      flights: (results?.flights || []).map(f => ({
+        airline: f.airline,
+        flight_number: f.flight_number,
+        departure_time: f.departure_time,
+        arrival_time: f.arrival_time,
+        departure_airport: f.departure_airport,
+        arrival_airport: f.arrival_airport,
+        duration: f.duration,
+        class_type: f.class_type || f.class || 'Economy',
+        price: f.price,
+        stops: typeof f.stops === 'number' ? f.stops : 0,
+        aircraft: f.aircraft
+      })),
+      hotels: (results?.hotels || []).map(h => ({
+        name: h.name,
+        location: h.location,
+        price_per_night: h.price_per_night,
+        rating: h.rating,
+        description: h.description || ''
+      })),
+      itinerary: (results?.itinerary || []).map((day, idx) => ({
+        day: idx + 1,
+        activities: (day.activities || []).map(a => ({
+          name: a.name,
+          time: a.time || '',
+          description: a.description || ''
+        }))
+      })),
+      cost_breakdown: {
+        flights: results?.cost_breakdown?.flights || 0,
+        hotels: results?.cost_breakdown?.accommodation || 0,
+        transportation: results?.cost_breakdown?.transportation || 0,
+        activities: results?.cost_breakdown?.activities || 0,
+        food: results?.cost_breakdown?.food || 0,
+        miscellaneous: results?.cost_breakdown?.miscellaneous || 0
+      },
+      total_estimated_cost: results?.total_cost || 0
+    }
+
     setIsDownloadingPDF(true)
     try {
       const response = await fetch('/api/generate-pdf-from-data', {
@@ -43,29 +92,30 @@ const Results = ({ results, error, onReset, formData, selectedVibe }) => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(results)
+        body: JSON.stringify(pdfPayload)
       })
 
       if (!response.ok) {
-        throw new Error('Failed to generate PDF')
+        console.error('Failed to generate PDF:', response.status)
+        return
       }
 
-      // Get the PDF blob
-      const blob = await response.blob()
-      
-      // Create download link
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `travel_plan_${formData.destination}_${new Date().toISOString().split('T')[0]}.pdf`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
-      
+      try {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `travel_plan_${pdfPayload.search_criteria.destination}_${new Date().toISOString().split('T')[0]}.pdf`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+      } catch (e) {
+        // If the response was OK but processing the blob failed, avoid noisy alerts
+        console.warn('PDF downloaded but post-processing failed:', e)
+      }
     } catch (error) {
       console.error('Error downloading PDF:', error)
-      alert('Failed to download PDF. Please try again.')
     } finally {
       setIsDownloadingPDF(false)
     }

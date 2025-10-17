@@ -17,7 +17,7 @@ router = APIRouter()
 # Initialize PDF generator
 pdf_generator = TravelPlanPDFGenerator()
 
-@router.get("/api/generate-pdf")
+@router.get("/generate-pdf")
 async def generate_travel_pdf(
     current_user: UserResponse = Depends(get_current_user)
 ):
@@ -130,7 +130,7 @@ async def generate_travel_pdf(
         logging.error(f"Error generating PDF: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate PDF")
 
-@router.post("/api/generate-pdf-from-data")
+@router.post("/generate-pdf-from-data")
 async def generate_pdf_from_data(
     travel_data: Dict[str, Any],
     current_user: UserResponse = Depends(get_current_user)

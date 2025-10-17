@@ -340,9 +340,9 @@ class TravelPlanPDFGenerator:
         # Add total row
         per_person_total = total_cost / travelers if travelers > 0 else total_cost
         cost_data.append([
-            '<b>TOTAL</b>',
-            f'<font color="#059669"><b>${total_cost:.2f}</b></font>',
-            f'<font color="#059669"><b>${per_person_total:.2f}</b></font>'
+            'TOTAL',
+            f'${total_cost:.2f}',
+            f'${per_person_total:.2f}'
         ])
         
         cost_table = Table(cost_data, colWidths=[2*inch, 1.5*inch, 1.5*inch])
@@ -353,6 +353,7 @@ class TravelPlanPDFGenerator:
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTNAME', (0, 1), (-1, -2), 'Helvetica'),
             ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('TEXTCOLOR', (1, -1), (-1, -1), HexColor('#059669')),
             ('FONTSIZE', (0, 0), (-1, -1), 10),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
             ('TOPPADDING', (0, 0), (-1, -1), 8),
