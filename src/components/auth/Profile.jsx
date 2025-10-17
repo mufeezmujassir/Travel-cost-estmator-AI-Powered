@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { User, Mail, Calendar, Edit, Save, X, Trash2, Shield, AlertTriangle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { travelAPI } from '../../services/api';
 
 const Profile = ({ onBack }) => {
   const { user, updateProfile, deleteAccount, logout } = useAuth();
@@ -14,6 +15,34 @@ const Profile = ({ onBack }) => {
     name: user?.name || '',
     email: user?.email || '',
   });
+  const [trips, setTrips] = useState([]);
+  const [loadingTrips, setLoadingTrips] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const { data } = await travelAPI.listTrips();
+        if (mounted) setTrips(data || []);
+      } catch (e) {
+        toast.error('Failed to load trips');
+      } finally {
+        if (mounted) setLoadingTrips(false);
+      }
+    };
+    load();
+    return () => { mounted = false; };
+  }, []);
+
+  const handleDeleteTrip = async (id) => {
+    try {
+      await travelAPI.deleteTrip(id);
+      setTrips((t) => t.filter((x) => x.id !== id));
+      toast.success('Trip deleted');
+    } catch (e) {
+      toast.error('Failed to delete trip');
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({
@@ -192,6 +221,40 @@ const Profile = ({ onBack }) => {
                         </div>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Trips History */}
+                  <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-6 border border-indigo-100">
+                    <div className="flex items-center mb-4">
+                      <Calendar className="w-6 h-6 text-indigo-600 mr-3" />
+                      <h3 className="text-lg font-semibold text-gray-900">My Trips</h3>
+                    </div>
+                    {loadingTrips ? (
+                      <p className="text-gray-600">Loading...</p>
+                    ) : trips.length === 0 ? (
+                      <p className="text-gray-600">No trips yet. Generate a plan to see it here.</p>
+                    ) : (
+                      <ul className="divide-y divide-gray-200">
+                        {trips.map((t) => (
+                          <li key={t.id} className="py-3 flex items-center justify-between">
+                            <div>
+                              <p className="font-semibold text-gray-900">{t?.vibe_analysis?.origin || 'Trip'} → {t?.vibe_analysis?.destination || ''}</p>
+                              <p className="text-sm text-gray-600">{new Date(t.generated_at).toLocaleString()} • {t.total_cost?.toLocaleString(undefined, { style: 'currency', currency: t.currency || 'USD' })}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => navigator.clipboard.writeText(JSON.stringify(t))}
+                                className="px-3 py-1 text-sm rounded-lg bg-white border border-gray-300 hover:bg-gray-50"
+                              >Copy JSON</button>
+                              <button
+                                onClick={() => handleDeleteTrip(t.id)}
+                                className="px-3 py-1 text-sm rounded-lg bg-red-50 text-red-700 border border-red-200 hover:bg-red-100"
+                              >Delete</button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
 
                   {/* Security Card */}

@@ -9,6 +9,7 @@ import Login from './components/auth/Login'
 import Register from './components/auth/Register'
 import Profile from './components/auth/Profile'
 import Aboutus from './components/aboutus'
+import ChatWidget from './components/ChatWidget'
 import { useTravelEstimation } from './hooks/useTravelEstimation'
 import { useAuth } from './context/AuthContext'
 import { SubscriptionProvider } from './context/SubscriptionContext'
@@ -103,6 +104,22 @@ function App() {
     toast.success('Account created successfully! Welcome!')
     setCurrentView('travel')
   }
+
+  // Expose minimal context for ChatWidget to consume
+  try {
+    window.appCurrentView = currentView
+    window.appFormSummary = {
+      origin: formData.origin,
+      destination: formData.destination,
+      startDate: formData.startDate,
+      returnDate: formData.returnDate,
+      travelers: formData.travelers,
+      budget: formData.budget,
+      selectedVibe: selectedVibe?.name || selectedVibe?.id || null
+    }
+    // Expose last estimation results for chatbot summarization
+    window.appLastResults = results || null
+  } catch (_) {}
 
   if (authLoading) {
     return (
@@ -244,6 +261,7 @@ function App() {
             )}
           </AnimatePresence>
         </main>
+         <ChatWidget />
       </div>
     </SubscriptionProvider>
   )
