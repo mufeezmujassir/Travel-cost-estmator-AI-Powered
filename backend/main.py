@@ -204,8 +204,6 @@ app.include_router(trips_router)
 app.include_router(suitability_router)
 app.include_router(pdf_router)
 
-
-
 @app.post("/webhook")
 async def stripe_root_webhook(request: Request):
     """Root-level Stripe webhook endpoint (alias for /subscription/webhook)
@@ -214,7 +212,6 @@ async def stripe_root_webhook(request: Request):
     payload = await request.body()
     sig_header = request.headers.get('stripe-signature')
     return await StripeService.handle_webhook(payload, sig_header)
-
 # Create logger
 logger = logging.getLogger("travel_api")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")

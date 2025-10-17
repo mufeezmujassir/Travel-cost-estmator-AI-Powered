@@ -6,6 +6,7 @@ from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime
 import os
+from typing import Optional
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 # Optional scheme that does not raise when token is missing
@@ -270,7 +271,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     )
 
 # Optional current user that returns None when no/invalid token is provided
-async def get_optional_current_user(token: str | None = Depends(optional_oauth2_scheme)):
+
+async def get_optional_current_user(token: Optional[str] = Depends(optional_oauth2_scheme)):
     if not token:
         return None
     try:

@@ -92,7 +92,8 @@ def _format_context_block(snippets: List[tuple]) -> str:
     return "\n".join(lines)
 
 
-def _format_remaining_generations(user: UserResponse | None) -> Optional[str]:
+def _format_remaining_generations(user: Optional[UserResponse]) -> Optional[str]:
+
     if not user:
         return None
     try:
@@ -310,7 +311,7 @@ def _summarize_last_results(last: Dict[str, Any]) -> str:
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat_with_ai(request: ChatRequest, current_user: UserResponse | None = Depends(get_optional_current_user)):
+async def chat_with_ai(request: ChatRequest, current_user: Optional[UserResponse] = Depends(get_optional_current_user)):
     try:
         if not grok.initialized:
             await grok.initialize()
@@ -386,7 +387,7 @@ async def chat_with_ai(request: ChatRequest, current_user: UserResponse | None =
 
 
 @router.post("/chat/stream")
-async def chat_stream(request: ChatRequest, current_user: UserResponse | None = Depends(get_optional_current_user)):
+async def chat_stream(request: ChatRequest, current_user: Optional[UserResponse] = Depends(get_optional_current_user)):
     """Simple streaming endpoint that sends newline-delimited JSON chunks.
     For now we buffer Grok output and stream it as one chunk to keep compatibility; can be upgraded to true token streaming later.
     """
