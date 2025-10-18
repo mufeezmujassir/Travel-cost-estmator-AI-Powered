@@ -137,7 +137,7 @@ async def get_batch_vibe_suitability(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
         
-        # Calculate scores for all vibes in parallel
+        # Calculate scores for all vibes in parallel with timeout
         tasks = []
         for vibe in vibe_list:
             task = suitability_scorer.calculate_suitability_score(
@@ -149,7 +149,21 @@ async def get_batch_vibe_suitability(
             )
             tasks.append(task)
         
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        # Set overall timeout for batch processing (max 10 seconds)
+        try:
+            results = await asyncio.wait_for(
+                asyncio.gather(*tasks, return_exceptions=True),
+                timeout=10.0
+            )
+        except asyncio.TimeoutError:
+            print("Batch suitability calculation timed out, using fallback scores")
+            results = []
+            for vibe in vibe_list:
+                results.append({
+                    "score": 50.0,
+                    "label": "✔ Good Timing",
+                    "reason": "Quick assessment - detailed analysis timed out"
+                })
         
         # Format results
         vibe_scores = {}

@@ -54,19 +54,32 @@ class SuitabilityScorer:
             start_dt = datetime.strptime(start_date, "%Y-%m-%d")
             month = start_dt.month
             
-            # Get destination information
-            dest_info = await self.region_mapper.get_destination_info(destination)
-            
-            # Calculate individual scores
+            # Get destination information with timeout
             try:
-                weather_score = await self._calculate_weather_score(vibe, dest_info, month)
-            except Exception as e:
+                dest_info = await asyncio.wait_for(
+                    self.region_mapper.get_destination_info(destination),
+                    timeout=3.0  # 3 second timeout
+                )
+            except asyncio.TimeoutError:
+                print(f"Timeout getting destination info for {destination}")
+                dest_info = {"region": "Unknown", "hemisphere": "north", "climate_zone": "temperate"}
+            
+            # Calculate individual scores with timeouts
+            try:
+                weather_score = await asyncio.wait_for(
+                    self._calculate_weather_score(vibe, dest_info, month),
+                    timeout=5.0  # 5 second timeout for weather
+                )
+            except (Exception, asyncio.TimeoutError) as e:
                 print(f"Weather score error: {e}")
                 weather_score = {"score": 50.0, "summary": "Weather data unavailable"}
             
             try:
-                price_score = await self._calculate_price_score(origin, destination, start_date, duration_days)
-            except Exception as e:
+                price_score = await asyncio.wait_for(
+                    self._calculate_price_score(origin, destination, start_date, duration_days),
+                    timeout=3.0  # 3 second timeout for price
+                )
+            except (Exception, asyncio.TimeoutError) as e:
                 print(f"Price score error: {e}")
                 price_score = {"score": 50.0, "summary": "Price data unavailable"}
             
