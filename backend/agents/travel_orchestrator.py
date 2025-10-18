@@ -508,6 +508,17 @@ class TravelOrchestrator:
             state["cost_breakdown"].miscellaneous
         ])
         
+        # Enhance vibe_analysis with trip details
+        enhanced_vibe_analysis = state["emotional_analysis"].copy() if state["emotional_analysis"] else {}
+        enhanced_vibe_analysis.update({
+            "origin": state["request"].origin,
+            "destination": state["request"].destination,
+            "start_date": state["request"].start_date,
+            "return_date": state["request"].return_date,
+            "travelers": state["request"].travelers,
+            "vibe": state["request"].vibe.value
+        })
+        
         return TravelResponse(
             request_id=str(uuid.uuid4()),
             flights=state["flights"],
@@ -517,7 +528,7 @@ class TravelOrchestrator:
             total_cost=total_cost,
             season_recommendation=state["season_recommendation"],
             recommendations=state["recommendations"],
-            vibe_analysis=state["emotional_analysis"],
+            vibe_analysis=enhanced_vibe_analysis,
             price_trends=state.get("price_trends") if state.get("price_trends") else None,
             transportation=state.get("transportation"),  # Include transportation data
             is_domestic_travel=state.get("is_domestic_travel", False),  # Include domestic travel flag

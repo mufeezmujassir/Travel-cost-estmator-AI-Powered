@@ -147,6 +147,15 @@ class FlightSearchAgent(BaseAgent):
         if not flights:
             return []
         
+        # Filter out flights with invalid prices (0 or None)
+        valid_flights = [flight for flight in flights if flight.price and flight.price > 0]
+        
+        if not valid_flights:
+            print("⚠️ No flights with valid prices found")
+            return []
+        
+        print(f"✅ Filtered {len(flights) - len(valid_flights)} flights with invalid prices, {len(valid_flights)} valid flights remaining")
+        
         # Sort by price with small penalty for stops
         def flight_sort_key(flight: Flight) -> float:
             # Base price
@@ -159,7 +168,7 @@ class FlightSearchAgent(BaseAgent):
             return price + stops_penalty
         
         # Sort flights by adjusted price (cheapest first)
-        sorted_flights = sorted(flights, key=flight_sort_key)
+        sorted_flights = sorted(valid_flights, key=flight_sort_key)
         
         # Return top 10 options (increased from 3 to give users more choices)
         return sorted_flights[:10]

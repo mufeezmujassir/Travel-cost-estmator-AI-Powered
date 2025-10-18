@@ -174,18 +174,34 @@ class SerpService:
                 if value is None:
                     return None
                 if isinstance(value, (int, float)):
+                    # Don't accept 0 or negative prices as valid
+                    if float(value) <= 0:
+                        return None
                     return float(value)
                 if isinstance(value, dict):
                     for k in ["lowest", "per_night", "rate", "value", "amount", "extracted_price", "rate_per_night", "extracted_lowest", "total_rate", "extracted_total"]:  # Added more keys
                         if k in value and value[k] is not None:
                             try:
-                                return float(value[k])
+                                price = float(value[k])
+                                # Don't accept 0 or negative prices as valid
+                                if price <= 0:
+                                    continue
+                                return price
                             except Exception:
                                 continue
-                    return 0.0
+                    return None  # Return None instead of 0.0 for unavailable prices
                 s = str(value)
+                # Check for common "unavailable" indicators
+                if any(indicator in s.lower() for indicator in ["unavailable", "n/a", "na", "not available", "price unavailable"]):
+                    return None
                 digits = ''.join(ch for ch in s if (ch.isdigit() or ch in ['.', ',']))
-                return float(digits.replace(',', '')) if digits else None
+                if digits:
+                    price = float(digits.replace(',', ''))
+                    # Don't accept 0 or negative prices as valid
+                    if price <= 0:
+                        return None
+                    return price
+                return None
             except Exception:
                 return None
 
@@ -219,19 +235,24 @@ class SerpService:
                                 price_value = price_value[k]
                                 break
 
-                    flights.append({
-                        "airline": first_seg.get("airline", "Unknown"),
-                        "flight_number": first_seg.get("flight_number", "N/A"),
-                        "departure_time": dep.get("time", dep.get("departure_time", "")),
-                        "arrival_time": arr.get("time", arr.get("arrival_time", "")),
-                        "departure_airport": dep.get("id", dep.get("airport", "")),
-                        "arrival_airport": arr.get("id", arr.get("airport", "")),
-                        "duration": f"{int(duration_total)} min" if isinstance(duration_total, (int, float)) else (duration_total or ""),
-                        "class_type": first_seg.get("travel_class", "Economy"),
-                        "price": _coerce_price(price_value) or 0.0,
-                        "stops": max(len(segments) - 1, 0),
-                        "aircraft": first_seg.get("airplane"),
-                    })
+                    # Only add flight if we have a valid price
+                    coerced_price = _coerce_price(price_value)
+                    if coerced_price is not None and coerced_price > 0:
+                        flights.append({
+                            "airline": first_seg.get("airline", "Unknown"),
+                            "flight_number": first_seg.get("flight_number", "N/A"),
+                            "departure_time": dep.get("time", dep.get("departure_time", "")),
+                            "arrival_time": arr.get("time", arr.get("arrival_time", "")),
+                            "departure_airport": dep.get("id", dep.get("airport", "")),
+                            "arrival_airport": arr.get("id", arr.get("airport", "")),
+                            "duration": f"{int(duration_total)} min" if isinstance(duration_total, (int, float)) else (duration_total or ""),
+                            "class_type": first_seg.get("travel_class", "Economy"),
+                            "price": coerced_price,
+                            "stops": max(len(segments) - 1, 0),
+                            "aircraft": first_seg.get("airplane"),
+                        })
+                    else:
+                        print(f"⚠️ Skipping flight with unavailable price: {first_seg.get('airline', 'Unknown')} {first_seg.get('flight_number', 'N/A')}")
                 except Exception:
                     pass
 
