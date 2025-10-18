@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { User, Mail, Calendar, Edit, Save, X, Trash2, Shield, AlertTriangle } from 'lucide-react';
+import { 
+  User, Mail, Calendar, Edit, Save, X, Trash2, Shield, AlertTriangle, 
+  ChevronDown, ChevronRight, Plane, MapPin, DollarSign, Clock, 
+  Eye, EyeOff, Download, Share2, Copy, Loader2
+} from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { travelAPI } from '../../services/api';
+import Results from '../Results';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Profile = ({ onBack }) => {
   const { user, updateProfile, deleteAccount, logout } = useAuth();
@@ -17,6 +23,12 @@ const Profile = ({ onBack }) => {
   });
   const [trips, setTrips] = useState([]);
   const [loadingTrips, setLoadingTrips] = useState(true);
+
+  // Enhanced state for multiple trip expansion
+  const [expandedTripIds, setExpandedTripIds] = useState([]);
+  const [tripDetails, setTripDetails] = useState({});
+  const [loadingTripDetails, setLoadingTripDetails] = useState({});
+  const [copiedTripId, setCopiedTripId] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -38,9 +50,51 @@ const Profile = ({ onBack }) => {
     try {
       await travelAPI.deleteTrip(id);
       setTrips((t) => t.filter((x) => x.id !== id));
-      toast.success('Trip deleted');
+      // Clear cache and remove from expanded list
+      setTripDetails((prev) => {
+        const copy = { ...prev };
+        delete copy[id];
+        return copy;
+      });
+      setExpandedTripIds(prev => prev.filter(tripId => tripId !== id));
+      toast.success('Trip deleted successfully');
     } catch (e) {
       toast.error('Failed to delete trip');
+    }
+  };
+
+  const handleToggleTrip = async (id) => {
+    const isCurrentlyExpanded = expandedTripIds.includes(id);
+    
+    if (isCurrentlyExpanded) {
+      setExpandedTripIds(prev => prev.filter(tripId => tripId !== id));
+    } else {
+      setExpandedTripIds(prev => [...prev, id]);
+      
+      if (!tripDetails[id]) {
+        setLoadingTripDetails((s) => ({ ...s, [id]: true }));
+        try {
+          const { data } = await travelAPI.getTrip(id);
+          setTripDetails((prev) => ({ ...prev, [id]: data || null }));
+        } catch (e) {
+          toast.error('Failed to load trip details');
+          setExpandedTripIds(prev => prev.filter(tripId => tripId !== id));
+          return;
+        } finally {
+          setLoadingTripDetails((s) => ({ ...s, [id]: false }));
+        }
+      }
+    }
+  };
+
+  const handleCopyTrip = async (trip) => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(trip, null, 2));
+      setCopiedTripId(trip.id);
+      toast.success('Trip data copied to clipboard');
+      setTimeout(() => setCopiedTripId(null), 2000);
+    } catch (e) {
+      toast.error('Failed to copy trip data');
     }
   };
 
@@ -109,6 +163,13 @@ const Profile = ({ onBack }) => {
     });
   };
 
+  const formatCurrency = (amount, currency = 'USD') => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency
+    }).format(amount || 0);
+  };
+
   const getInitials = (name) => {
     return name
       .split(' ')
@@ -134,26 +195,36 @@ const Profile = ({ onBack }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Header with Back Button */}
-        <div className="text-center mb-8 relative">
+      <div className="max-w-6xl mx-auto">
+        {/* Enhanced Header */}
+        <motion.div 
+          className="text-center mb-8 relative"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
           <button
             onClick={onBack}
-            className="absolute left-0 top-1/2 transform -translate-y-1/2 flex items-center text-gray-600 hover:text-gray-800 transition-colors duration-200"
+            className="absolute left-0 top-1/2 transform -translate-y-1/2 flex items-center text-gray-600 hover:text-gray-800 transition-colors duration-200 group"
           >
-            <X className="w-5 h-5 mr-2" />
+            <X className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
             Back
           </button>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Profile Settings
           </h1>
-          <p className="text-gray-600 mt-2">Manage your account information and preferences</p>
-        </div>
+          <p className="text-gray-600 mt-2">Manage your account information and travel history</p>
+        </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Sidebar */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Enhanced Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl p-6 border border-white/60">
+            <motion.div 
+              className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl p-6 border border-white/60 sticky top-8"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
               <div className="text-center mb-6">
                 <div className="relative inline-block">
                   <div className="w-24 h-24 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg mx-auto mb-4">
@@ -176,17 +247,27 @@ const Profile = ({ onBack }) => {
                 <Edit className="w-5 h-5 mr-3 text-blue-600 group-hover:text-blue-700" />
                 Edit Profile
               </button>
-            </div>
+            </motion.div>
           </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-2">
-            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl p-8 border border-white/60">
+          {/* Enhanced Main Content */}
+          <div className="lg:col-span-3">
+            <motion.div 
+              className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl p-8 border border-white/60"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
               {!isEditing ? (
                 // View Mode
                 <div className="space-y-8">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-100">
+                  {/* Personal & Account Info Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <motion.div 
+                      className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-100"
+                      whileHover={{ scale: 1.02 }}
+                      transition={{ duration: 0.2 }}
+                    >
                       <div className="flex items-center mb-4">
                         <User className="w-6 h-6 text-blue-600 mr-3" />
                         <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
@@ -201,9 +282,13 @@ const Profile = ({ onBack }) => {
                           <p className="mt-1 text-lg font-semibold text-gray-900">{user.email}</p>
                         </div>
                       </div>
-                    </div>
+                    </motion.div>
 
-                    <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl p-6 border border-green-100">
+                    <motion.div 
+                      className="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl p-6 border border-green-100"
+                      whileHover={{ scale: 1.02 }}
+                      transition={{ duration: 0.2 }}
+                    >
                       <div className="flex items-center mb-4">
                         <Calendar className="w-6 h-6 text-green-600 mr-3" />
                         <h3 className="text-lg font-semibold text-gray-900">Account Information</h3>
@@ -220,45 +305,187 @@ const Profile = ({ onBack }) => {
                           </span>
                         </div>
                       </div>
-                    </div>
+                    </motion.div>
                   </div>
 
-                  {/* Trips History */}
-                  <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-6 border border-indigo-100">
-                    <div className="flex items-center mb-4">
-                      <Calendar className="w-6 h-6 text-indigo-600 mr-3" />
-                      <h3 className="text-lg font-semibold text-gray-900">My Trips</h3>
+                  {/* Enhanced Trips History */}
+                  <motion.div 
+                    className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-6 border border-indigo-100"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.3 }}
+                  >
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center">
+                        <Calendar className="w-6 h-6 text-indigo-600 mr-3" />
+                        <h3 className="text-lg font-semibold text-gray-900">My Travel History</h3>
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {trips.length} trip{trips.length !== 1 ? 's' : ''} total
+                      </div>
                     </div>
+
                     {loadingTrips ? (
-                      <p className="text-gray-600">Loading...</p>
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+                        <span className="ml-3 text-gray-600">Loading your trips...</span>
+                      </div>
                     ) : trips.length === 0 ? (
-                      <p className="text-gray-600">No trips yet. Generate a plan to see it here.</p>
+                      <div className="text-center py-12">
+                        <Plane className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                        <h4 className="text-lg font-medium text-gray-900 mb-2">No trips yet</h4>
+                        <p className="text-gray-600">Generate your first travel plan to see it here!</p>
+                      </div>
                     ) : (
-                      <ul className="divide-y divide-gray-200">
-                        {trips.map((t) => (
-                          <li key={t.id} className="py-3 flex items-center justify-between">
-                            <div>
-                              <p className="font-semibold text-gray-900">{t?.vibe_analysis?.origin || 'Trip'} → {t?.vibe_analysis?.destination || ''}</p>
-                              <p className="text-sm text-gray-600">{new Date(t.generated_at).toLocaleString()} • {t.total_cost?.toLocaleString(undefined, { style: 'currency', currency: t.currency || 'USD' })}</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => navigator.clipboard.writeText(JSON.stringify(t))}
-                                className="px-3 py-1 text-sm rounded-lg bg-white border border-gray-300 hover:bg-gray-50"
-                              >Copy JSON</button>
-                              <button
-                                onClick={() => handleDeleteTrip(t.id)}
-                                className="px-3 py-1 text-sm rounded-lg bg-red-50 text-red-700 border border-red-200 hover:bg-red-100"
-                              >Delete</button>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
+                      <div className="space-y-4">
+                        {trips.map((trip, index) => {
+                          const isOpen = expandedTripIds.includes(trip.id);
+                          const currency = trip.currency || 'USD';
+                          const isLoadingDetails = loadingTripDetails[trip.id];
+                          const hasDetails = tripDetails[trip.id];
+                          
+                          return (
+                            <motion.div
+                              key={trip.id}
+                              className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200"
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.3, delay: index * 0.1 }}
+                            >
+                              {/* Trip Header */}
+                              <div
+                                className="p-4 cursor-pointer hover:bg-gray-50 transition-colors duration-200"
+                                onClick={() => handleToggleTrip(trip.id)}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-4">
+                                    <div className="flex-shrink-0">
+                                      {isOpen ? (
+                                        <ChevronDown className="w-5 h-5 text-indigo-600" />
+                                      ) : (
+                                        <ChevronRight className="w-5 h-5 text-gray-400" />
+                                      )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center space-x-3">
+                                        <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                                          <Plane className="w-5 h-5 text-white" />
+                                        </div>
+                                        <div>
+                                          <h4 className="text-lg font-semibold text-gray-900 truncate">
+                                            {trip?.vibe_analysis?.origin || 'Unknown'} → {trip?.vibe_analysis?.destination || 'Unknown'}
+                                          </h4>
+                                          <div className="flex items-center space-x-4 text-sm text-gray-500">
+                                            <div className="flex items-center">
+                                              <Clock className="w-4 h-4 mr-1" />
+                                              {new Date(trip.generated_at).toLocaleDateString()}
+                                            </div>
+                                            <div className="flex items-center">
+                                              <DollarSign className="w-4 h-4 mr-1" />
+                                              {formatCurrency(trip.total_cost, currency)}
+                                            </div>
+                                            {trip?.vibe_analysis?.vibe && (
+                                              <div className="flex items-center">
+                                                <MapPin className="w-4 h-4 mr-1" />
+                                                {trip.vibe_analysis.vibe.charAt(0).toUpperCase() + trip.vibe_analysis.vibe.slice(1)}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="flex items-center space-x-2">
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleCopyTrip(trip); }}
+                                      className={`p-2 rounded-lg transition-colors duration-200 ${
+                                        copiedTripId === trip.id 
+                                          ? 'bg-green-100 text-green-600' 
+                                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                      }`}
+                                      title="Copy trip data"
+                                    >
+                                      {copiedTripId === trip.id ? (
+                                        <Eye className="w-4 h-4" />
+                                      ) : (
+                                        <Copy className="w-4 h-4" />
+                                      )}
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleDeleteTrip(trip.id); }}
+                                      className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors duration-200"
+                                      title="Delete trip"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Expanded Details */}
+                              <AnimatePresence>
+                                {isOpen && (
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.3 }}
+                                    className="border-t border-gray-200"
+                                  >
+                                    <div className="p-4 bg-gray-50">
+                                      {isLoadingDetails && (
+                                        <div className="flex items-center justify-center py-8">
+                                          <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
+                                          <span className="ml-3 text-gray-600">Loading trip details...</span>
+                                        </div>
+                                      )}
+
+                                      {!isLoadingDetails && hasDetails && (
+                                        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                                          <Results
+                                            results={hasDetails}
+                                            error={null}
+                                            onReset={() => {
+                                              setExpandedTripIds(prev => prev.filter(tripId => tripId !== trip.id));
+                                            }}
+                                            formData={{
+                                              origin: hasDetails?.vibe_analysis?.origin || 'Unknown',
+                                              destination: hasDetails?.vibe_analysis?.destination || 'Unknown',
+                                              startDate: hasDetails?.vibe_analysis?.start_date || '',
+                                              returnDate: hasDetails?.vibe_analysis?.return_date || '',
+                                              travelers: hasDetails?.vibe_analysis?.travelers || 1
+                                            }}
+                                            selectedVibe={{
+                                              id: (hasDetails?.vibe_analysis?.vibe || 'general').toString().toLowerCase(),
+                                              name: (hasDetails?.vibe_analysis?.vibe || 'Your Vibe')
+                                            }}
+                                          />
+                                        </div>
+                                      )}
+
+                                      {!isLoadingDetails && !hasDetails && (
+                                        <div className="text-center py-8 text-gray-500">
+                                          Failed to load trip details
+                                        </div>
+                                      )}
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
                     )}
-                  </div>
+                  </motion.div>
 
                   {/* Security Card */}
-                  <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-6 border border-orange-100">
+                  <motion.div 
+                    className="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-6 border border-orange-100"
+                    whileHover={{ scale: 1.01 }}
+                    transition={{ duration: 0.2 }}
+                  >
                     <div className="flex items-center mb-4">
                       <Shield className="w-6 h-6 text-orange-600 mr-3" />
                       <h3 className="text-lg font-semibold text-gray-900">Security</h3>
@@ -273,7 +500,7 @@ const Profile = ({ onBack }) => {
                       <Trash2 className="w-4 h-4 mr-2" />
                       Delete Account
                     </button>
-                  </div>
+                  </motion.div>
                 </div>
               ) : (
                 // Edit Mode
@@ -339,15 +566,26 @@ const Profile = ({ onBack }) => {
                   </div>
                 </form>
               )}
-            </div>
+            </motion.div>
           </div>
         </div>
       </div>
 
       {/* Enhanced Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 transform transition-all duration-300 scale-100">
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div 
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+            >
             <div className="text-center">
               <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
                 <AlertTriangle className="h-6 w-6 text-red-600" />
@@ -394,9 +632,10 @@ const Profile = ({ onBack }) => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

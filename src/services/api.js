@@ -53,6 +53,8 @@ export const travelAPI = {
   getVibes: () => api.get('/api/vibes'),
   getSeasonRecommendation: (vibe, destination, startDate) => 
     api.get(`/api/season-recommendation?vibe=${vibe}&destination=${destination}&start_date=${startDate}`),
+  getVibeSuitability: (params) => api.get('/api/vibe-suitability', { params }),
+  getBatchVibeSuitability: (params) => api.get('/api/vibe-suitability/batch', { params }),
   getPublicVibes: () => axios.get(`${API_BASE_URL}/public/vibes`), // Public endpoint, no auth needed
   listTrips: () => api.get('/api/trips/'),
   getTrip: (id) => api.get(`/api/trips/${id}`),

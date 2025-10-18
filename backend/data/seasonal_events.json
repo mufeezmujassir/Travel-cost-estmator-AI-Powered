@@ -1,0 +1,626 @@
+[
+  {
+    "region": "Southeast Asia",
+    "climate_zone": "tropical",
+    "month": 1,
+    "events": ["Chinese New Year", "Dry Season Peak"],
+    "vibes": ["cultural", "beach", "adventure"],
+    "description": "Dry season with cultural celebrations"
+  },
+  {
+    "region": "Southeast Asia", 
+    "climate_zone": "tropical",
+    "month": 2,
+    "events": ["Dry Season", "Valentine's Day"],
+    "vibes": ["beach", "romantic", "adventure"],
+    "description": "Ideal weather for outdoor activities"
+  },
+  {
+    "region": "Southeast Asia",
+    "climate_zone": "tropical", 
+    "month": 3,
+    "events": ["Songkran Festival", "Hot Season Begins"],
+    "vibes": ["cultural", "adventure"],
+    "description": "Water festival and rising temperatures"
+  },
+  {
+    "region": "Southeast Asia",
+    "climate_zone": "tropical",
+    "month": 4,
+    "events": ["Hot Season", "Thai New Year"],
+    "vibes": ["cultural"],
+    "description": "Peak heat, cultural celebrations"
+  },
+  {
+    "region": "Southeast Asia",
+    "climate_zone": "tropical",
+    "month": 5,
+    "events": ["Monsoon Season Begins"],
+    "vibes": ["cultural", "wellness"],
+    "description": "Rainy season starts, indoor activities preferred"
+  },
+  {
+    "region": "Southeast Asia",
+    "climate_zone": "tropical",
+    "month": 6,
+    "events": ["Monsoon Season"],
+    "vibes": ["cultural", "wellness"],
+    "description": "Heavy rainfall, indoor cultural experiences"
+  },
+  {
+    "region": "Southeast Asia",
+    "climate_zone": "tropical",
+    "month": 7,
+    "events": ["Monsoon Season"],
+    "vibes": ["cultural", "wellness"],
+    "description": "Peak monsoon, spa and cultural activities"
+  },
+  {
+    "region": "Southeast Asia",
+    "climate_zone": "tropical",
+    "month": 8,
+    "events": ["Monsoon Season"],
+    "vibes": ["cultural", "wellness"],
+    "description": "Continued rains, indoor experiences"
+  },
+  {
+    "region": "Southeast Asia",
+    "climate_zone": "tropical",
+    "month": 9,
+    "events": ["Monsoon Season Ends"],
+    "vibes": ["beach", "adventure", "nature"],
+    "description": "Transition to dry season"
+  },
+  {
+    "region": "Southeast Asia",
+    "climate_zone": "tropical",
+    "month": 10,
+    "events": ["Dry Season Begins"],
+    "vibes": ["beach", "adventure", "nature"],
+    "description": "Excellent weather for outdoor activities"
+  },
+  {
+    "region": "Southeast Asia",
+    "climate_zone": "tropical",
+    "month": 11,
+    "events": ["Dry Season", "Loy Krathong"],
+    "vibes": ["beach", "romantic", "cultural"],
+    "description": "Perfect weather and lantern festival"
+  },
+  {
+    "region": "Southeast Asia",
+    "climate_zone": "tropical",
+    "month": 12,
+    "events": ["Dry Season", "Christmas", "New Year"],
+    "vibes": ["beach", "romantic", "cultural"],
+    "description": "Peak season with holiday celebrations"
+  },
+  {
+    "region": "East Asia",
+    "climate_zone": "temperate",
+    "month": 3,
+    "events": ["Cherry Blossom Season"],
+    "vibes": ["romantic", "nature", "cultural"],
+    "description": "Iconic cherry blossom viewing"
+  },
+  {
+    "region": "East Asia",
+    "climate_zone": "temperate",
+    "month": 4,
+    "events": ["Cherry Blossom Season", "Spring Festival"],
+    "vibes": ["romantic", "nature", "cultural"],
+    "description": "Peak cherry blossom and spring celebrations"
+  },
+  {
+    "region": "East Asia",
+    "climate_zone": "temperate",
+    "month": 5,
+    "events": ["Golden Week", "Spring Weather"],
+    "vibes": ["cultural", "nature", "adventure"],
+    "description": "National holiday period with pleasant weather"
+  },
+  {
+    "region": "East Asia",
+    "climate_zone": "temperate",
+    "month": 6,
+    "events": ["Rainy Season Begins"],
+    "vibes": ["cultural", "wellness"],
+    "description": "Tsuyu season starts, indoor activities"
+  },
+  {
+    "region": "East Asia",
+    "climate_zone": "temperate",
+    "month": 7,
+    "events": ["Rainy Season", "Summer Festivals"],
+    "vibes": ["cultural", "wellness"],
+    "description": "Peak rainy season with cultural festivals"
+  },
+  {
+    "region": "East Asia",
+    "climate_zone": "temperate",
+    "month": 8,
+    "events": ["Obon Festival", "Hot Summer"],
+    "vibes": ["cultural", "wellness"],
+    "description": "Traditional festival and peak summer heat"
+  },
+  {
+    "region": "East Asia",
+    "climate_zone": "temperate",
+    "month": 9,
+    "events": ["Autumn Begins"],
+    "vibes": ["nature", "cultural", "adventure"],
+    "description": "Pleasant autumn weather begins"
+  },
+  {
+    "region": "East Asia",
+    "climate_zone": "temperate",
+    "month": 10,
+    "events": ["Autumn Foliage"],
+    "vibes": ["nature", "romantic", "cultural"],
+    "description": "Beautiful autumn colors"
+  },
+  {
+    "region": "East Asia",
+    "climate_zone": "temperate",
+    "month": 11,
+    "events": ["Peak Autumn Foliage"],
+    "vibes": ["nature", "romantic", "cultural"],
+    "description": "Peak autumn viewing season"
+  },
+  {
+    "region": "East Asia",
+    "climate_zone": "temperate",
+    "month": 12,
+    "events": ["Winter Begins", "Christmas"],
+    "vibes": ["cultural", "wellness"],
+    "description": "Cold weather, indoor cultural experiences"
+  },
+  {
+    "region": "Europe",
+    "climate_zone": "temperate",
+    "month": 3,
+    "events": ["Spring Begins"],
+    "vibes": ["nature", "cultural", "romantic"],
+    "description": "Spring awakening across Europe"
+  },
+  {
+    "region": "Europe",
+    "climate_zone": "temperate",
+    "month": 4,
+    "events": ["Easter", "Spring Weather"],
+    "vibes": ["cultural", "nature", "romantic"],
+    "description": "Easter celebrations and pleasant spring weather"
+  },
+  {
+    "region": "Europe",
+    "climate_zone": "temperate",
+    "month": 5,
+    "events": ["May Day", "Spring Peak"],
+    "vibes": ["cultural", "nature", "adventure"],
+    "description": "Perfect spring weather for outdoor activities"
+  },
+  {
+    "region": "Europe",
+    "climate_zone": "temperate",
+    "month": 6,
+    "events": ["Summer Begins", "Music Festivals"],
+    "vibes": ["cultural", "adventure", "nature"],
+    "description": "Summer season with music festivals"
+  },
+  {
+    "region": "Europe",
+    "climate_zone": "temperate",
+    "month": 7,
+    "events": ["Peak Summer", "Tourist Season"],
+    "vibes": ["beach", "adventure", "cultural"],
+    "description": "Peak summer with high tourist activity"
+  },
+  {
+    "region": "Europe",
+    "climate_zone": "temperate",
+    "month": 8,
+    "events": ["Peak Summer", "Holiday Season"],
+    "vibes": ["beach", "adventure", "cultural"],
+    "description": "Peak summer holiday period"
+  },
+  {
+    "region": "Europe",
+    "climate_zone": "temperate",
+    "month": 9,
+    "events": ["Autumn Begins", "Harvest Season"],
+    "vibes": ["cultural", "nature", "culinary"],
+    "description": "Autumn harvest and wine season"
+  },
+  {
+    "region": "Europe",
+    "climate_zone": "temperate",
+    "month": 10,
+    "events": ["Oktoberfest", "Autumn Foliage"],
+    "vibes": ["cultural", "culinary", "nature"],
+    "description": "Beer festivals and autumn colors"
+  },
+  {
+    "region": "Europe",
+    "climate_zone": "temperate",
+    "month": 11,
+    "events": ["Autumn Peak", "Cultural Season"],
+    "vibes": ["cultural", "wellness"],
+    "description": "Peak autumn with cultural events"
+  },
+  {
+    "region": "Europe",
+    "climate_zone": "temperate",
+    "month": 12,
+    "events": ["Christmas Markets", "Winter Begins"],
+    "vibes": ["cultural", "romantic", "wellness"],
+    "description": "Magical Christmas markets and winter activities"
+  },
+  {
+    "region": "North America",
+    "climate_zone": "temperate",
+    "month": 3,
+    "events": ["Spring Break", "Spring Begins"],
+    "vibes": ["adventure", "beach", "nature"],
+    "description": "Spring break and warming weather"
+  },
+  {
+    "region": "North America",
+    "climate_zone": "temperate",
+    "month": 4,
+    "events": ["Spring Weather", "Easter"],
+    "vibes": ["nature", "cultural", "romantic"],
+    "description": "Pleasant spring weather and Easter"
+  },
+  {
+    "region": "North America",
+    "climate_zone": "temperate",
+    "month": 5,
+    "events": ["Memorial Day", "Spring Peak"],
+    "vibes": ["adventure", "nature", "beach"],
+    "description": "Perfect weather for outdoor activities"
+  },
+  {
+    "region": "North America",
+    "climate_zone": "temperate",
+    "month": 6,
+    "events": ["Summer Begins"],
+    "vibes": ["beach", "adventure", "nature"],
+    "description": "Summer season begins"
+  },
+  {
+    "region": "North America",
+    "climate_zone": "temperate",
+    "month": 7,
+    "events": ["Independence Day", "Peak Summer"],
+    "vibes": ["beach", "adventure", "cultural"],
+    "description": "Peak summer with national holiday"
+  },
+  {
+    "region": "North America",
+    "climate_zone": "temperate",
+    "month": 8,
+    "events": ["Peak Summer", "Vacation Season"],
+    "vibes": ["beach", "adventure", "nature"],
+    "description": "Peak summer vacation period"
+  },
+  {
+    "region": "North America",
+    "climate_zone": "temperate",
+    "month": 9,
+    "events": ["Labor Day", "Autumn Begins"],
+    "vibes": ["nature", "cultural", "adventure"],
+    "description": "End of summer, autumn begins"
+  },
+  {
+    "region": "North America",
+    "climate_zone": "temperate",
+    "month": 10,
+    "events": ["Halloween", "Autumn Foliage"],
+    "vibes": ["cultural", "nature", "romantic"],
+    "description": "Halloween and autumn colors"
+  },
+  {
+    "region": "North America",
+    "climate_zone": "temperate",
+    "month": 11,
+    "events": ["Thanksgiving", "Autumn Peak"],
+    "vibes": ["cultural", "culinary", "wellness"],
+    "description": "Thanksgiving and peak autumn"
+  },
+  {
+    "region": "North America",
+    "climate_zone": "temperate",
+    "month": 12,
+    "events": ["Christmas", "New Year", "Winter Begins"],
+    "vibes": ["cultural", "romantic", "wellness"],
+    "description": "Holiday season and winter activities"
+  },
+  {
+    "region": "South America",
+    "climate_zone": "tropical",
+    "month": 1,
+    "events": ["Summer Peak", "Carnival Season"],
+    "vibes": ["cultural", "beach", "adventure"],
+    "description": "Peak summer and carnival celebrations"
+  },
+  {
+    "region": "South America",
+    "climate_zone": "tropical",
+    "month": 2,
+    "events": ["Carnival", "Summer Weather"],
+    "vibes": ["cultural", "beach", "adventure"],
+    "description": "Carnival season with excellent weather"
+  },
+  {
+    "region": "South America",
+    "climate_zone": "tropical",
+    "month": 3,
+    "events": ["Autumn Begins"],
+    "vibes": ["nature", "cultural", "adventure"],
+    "description": "Autumn begins in Southern Hemisphere"
+  },
+  {
+    "region": "South America",
+    "climate_zone": "tropical",
+    "month": 4,
+    "events": ["Autumn Weather"],
+    "vibes": ["nature", "cultural", "adventure"],
+    "description": "Pleasant autumn weather"
+  },
+  {
+    "region": "South America",
+    "climate_zone": "tropical",
+    "month": 5,
+    "events": ["Autumn Peak"],
+    "vibes": ["nature", "cultural", "adventure"],
+    "description": "Peak autumn season"
+  },
+  {
+    "region": "South America",
+    "climate_zone": "tropical",
+    "month": 6,
+    "events": ["Winter Begins"],
+    "vibes": ["cultural", "wellness"],
+    "description": "Winter begins, indoor activities"
+  },
+  {
+    "region": "South America",
+    "climate_zone": "tropical",
+    "month": 7,
+    "events": ["Winter Season"],
+    "vibes": ["cultural", "wellness"],
+    "description": "Winter season, cultural experiences"
+  },
+  {
+    "region": "South America",
+    "climate_zone": "tropical",
+    "month": 8,
+    "events": ["Winter Peak"],
+    "vibes": ["cultural", "wellness"],
+    "description": "Peak winter, spa and cultural activities"
+  },
+  {
+    "region": "South America",
+    "climate_zone": "tropical",
+    "month": 9,
+    "events": ["Spring Begins"],
+    "vibes": ["nature", "cultural", "adventure"],
+    "description": "Spring begins in Southern Hemisphere"
+  },
+  {
+    "region": "South America",
+    "climate_zone": "tropical",
+    "month": 10,
+    "events": ["Spring Weather"],
+    "vibes": ["nature", "cultural", "adventure"],
+    "description": "Pleasant spring weather"
+  },
+  {
+    "region": "South America",
+    "climate_zone": "tropical",
+    "month": 11,
+    "events": ["Spring Peak"],
+    "vibes": ["nature", "cultural", "adventure"],
+    "description": "Peak spring season"
+  },
+  {
+    "region": "South America",
+    "climate_zone": "tropical",
+    "month": 12,
+    "events": ["Summer Begins", "Christmas"],
+    "vibes": ["beach", "cultural", "romantic"],
+    "description": "Summer begins with Christmas celebrations"
+  },
+  {
+    "region": "Africa",
+    "climate_zone": "tropical",
+    "month": 1,
+    "events": ["Dry Season", "Wildlife Migration"],
+    "vibes": ["nature", "adventure", "cultural"],
+    "description": "Dry season with wildlife viewing"
+  },
+  {
+    "region": "Africa",
+    "climate_zone": "tropical",
+    "month": 2,
+    "events": ["Dry Season Peak"],
+    "vibes": ["nature", "adventure", "cultural"],
+    "description": "Peak dry season for safari"
+  },
+  {
+    "region": "Africa",
+    "climate_zone": "tropical",
+    "month": 3,
+    "events": ["Dry Season"],
+    "vibes": ["nature", "adventure", "cultural"],
+    "description": "Excellent wildlife viewing"
+  },
+  {
+    "region": "Africa",
+    "climate_zone": "tropical",
+    "month": 4,
+    "events": ["Rainy Season Begins"],
+    "vibes": ["cultural", "wellness"],
+    "description": "Rainy season starts"
+  },
+  {
+    "region": "Africa",
+    "climate_zone": "tropical",
+    "month": 5,
+    "events": ["Rainy Season"],
+    "vibes": ["cultural", "wellness"],
+    "description": "Peak rainy season"
+  },
+  {
+    "region": "Africa",
+    "climate_zone": "tropical",
+    "month": 6,
+    "events": ["Rainy Season"],
+    "vibes": ["cultural", "wellness"],
+    "description": "Heavy rainfall, cultural experiences"
+  },
+  {
+    "region": "Africa",
+    "climate_zone": "tropical",
+    "month": 7,
+    "events": ["Rainy Season"],
+    "vibes": ["cultural", "wellness"],
+    "description": "Continued rains, indoor activities"
+  },
+  {
+    "region": "Africa",
+    "climate_zone": "tropical",
+    "month": 8,
+    "events": ["Rainy Season"],
+    "vibes": ["cultural", "wellness"],
+    "description": "Rainy season continues"
+  },
+  {
+    "region": "Africa",
+    "climate_zone": "tropical",
+    "month": 9,
+    "events": ["Dry Season Begins"],
+    "vibes": ["nature", "adventure", "cultural"],
+    "description": "Dry season begins"
+  },
+  {
+    "region": "Africa",
+    "climate_zone": "tropical",
+    "month": 10,
+    "events": ["Dry Season"],
+    "vibes": ["nature", "adventure", "cultural"],
+    "description": "Good wildlife viewing conditions"
+  },
+  {
+    "region": "Africa",
+    "climate_zone": "tropical",
+    "month": 11,
+    "events": ["Dry Season"],
+    "vibes": ["nature", "adventure", "cultural"],
+    "description": "Excellent safari conditions"
+  },
+  {
+    "region": "Africa",
+    "climate_zone": "tropical",
+    "month": 12,
+    "events": ["Dry Season", "Christmas"],
+    "vibes": ["nature", "adventure", "cultural"],
+    "description": "Peak dry season with holiday celebrations"
+  },
+  {
+    "region": "Oceania",
+    "climate_zone": "temperate",
+    "month": 1,
+    "events": ["Summer Peak", "Australia Day"],
+    "vibes": ["beach", "adventure", "cultural"],
+    "description": "Peak summer with national holiday"
+  },
+  {
+    "region": "Oceania",
+    "climate_zone": "temperate",
+    "month": 2,
+    "events": ["Summer Weather"],
+    "vibes": ["beach", "adventure", "nature"],
+    "description": "Excellent summer weather"
+  },
+  {
+    "region": "Oceania",
+    "climate_zone": "temperate",
+    "month": 3,
+    "events": ["Autumn Begins"],
+    "vibes": ["nature", "cultural", "adventure"],
+    "description": "Autumn begins in Southern Hemisphere"
+  },
+  {
+    "region": "Oceania",
+    "climate_zone": "temperate",
+    "month": 4,
+    "events": ["Autumn Weather"],
+    "vibes": ["nature", "cultural", "adventure"],
+    "description": "Pleasant autumn weather"
+  },
+  {
+    "region": "Oceania",
+    "climate_zone": "temperate",
+    "month": 5,
+    "events": ["Autumn Peak"],
+    "vibes": ["nature", "cultural", "adventure"],
+    "description": "Peak autumn season"
+  },
+  {
+    "region": "Oceania",
+    "climate_zone": "temperate",
+    "month": 6,
+    "events": ["Winter Begins"],
+    "vibes": ["cultural", "wellness"],
+    "description": "Winter begins, indoor activities"
+  },
+  {
+    "region": "Oceania",
+    "climate_zone": "temperate",
+    "month": 7,
+    "events": ["Winter Season"],
+    "vibes": ["cultural", "wellness"],
+    "description": "Winter season, cultural experiences"
+  },
+  {
+    "region": "Oceania",
+    "climate_zone": "temperate",
+    "month": 8,
+    "events": ["Winter Peak"],
+    "vibes": ["cultural", "wellness"],
+    "description": "Peak winter, spa and cultural activities"
+  },
+  {
+    "region": "Oceania",
+    "climate_zone": "temperate",
+    "month": 9,
+    "events": ["Spring Begins"],
+    "vibes": ["nature", "cultural", "adventure"],
+    "description": "Spring begins in Southern Hemisphere"
+  },
+  {
+    "region": "Oceania",
+    "climate_zone": "temperate",
+    "month": 10,
+    "events": ["Spring Weather"],
+    "vibes": ["nature", "cultural", "adventure"],
+    "description": "Pleasant spring weather"
+  },
+  {
+    "region": "Oceania",
+    "climate_zone": "temperate",
+    "month": 11,
+    "events": ["Spring Peak"],
+    "vibes": ["nature", "cultural", "adventure"],
+    "description": "Peak spring season"
+  },
+  {
+    "region": "Oceania",
+    "climate_zone": "temperate",
+    "month": 12,
+    "events": ["Summer Begins", "Christmas"],
+    "vibes": ["beach", "cultural", "romantic"],
+    "description": "Summer begins with Christmas celebrations"
+  }
+]

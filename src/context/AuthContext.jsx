@@ -16,24 +16,27 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [token, setToken] = useState(localStorage.getItem('token') || '');
 
   useEffect(() => {
     checkAuth();
   }, []);
 
   const checkAuth = async () => {
-    const token = localStorage.getItem('token');
-    if (token) {
+    const existingToken = localStorage.getItem('token');
+    if (existingToken) {
       try {
         const response = await authAPI.getProfile();
         setUser(response.data);
         setIsAuthenticated(true);
+        setToken(existingToken);
       } catch (error) {
         console.error('Auth check failed:', error);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setUser(null);
         setIsAuthenticated(false);
+        setToken('');
       }
     }
     setLoading(false);
@@ -49,6 +52,7 @@ export const AuthProvider = ({ children }) => {
       const { access_token } = loginResponse.data;
       
       localStorage.setItem('token', access_token);
+      setToken(access_token);
       
       // Fetch user profile
       const profileResponse = await authAPI.getProfile();
@@ -70,6 +74,7 @@ export const AuthProvider = ({ children }) => {
       const { access_token } = response.data;
       
       localStorage.setItem('token', access_token);
+      setToken(access_token);
       
       // Fetch user profile
       const profileResponse = await authAPI.getProfile();
@@ -89,6 +94,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('user');
     setUser(null);
     setIsAuthenticated(false);
+    setToken('');
   };
 
   const updateProfile = async (userData) => {
@@ -118,6 +124,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     error,
     isAuthenticated,
+    token,
     register,
     login,
     logout,

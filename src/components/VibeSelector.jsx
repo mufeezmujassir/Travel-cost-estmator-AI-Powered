@@ -1,9 +1,12 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Heart, Mountain, Waves, TreePine, Camera, Utensils, Zap } from 'lucide-react'
+import { travelAPI } from '../services/api'
 
 const VibeSelector = ({ onVibeSelect, onBack, formData }) => {
   const [selectedVibe, setSelectedVibe] = useState(null)
+  const [suitabilityScores, setSuitabilityScores] = useState({})
+  const [loadingScores, setLoadingScores] = useState(false)
 
   const vibes = [
     {
@@ -78,6 +81,44 @@ const VibeSelector = ({ onVibeSelect, onBack, formData }) => {
     }
   ]
 
+  // Fetch suitability scores when destination and dates are available
+  useEffect(() => {
+    if (formData.destination && formData.startDate) {
+      fetchSuitabilityScores()
+    }
+  }, [formData.destination, formData.startDate])
+
+  const calculateDuration = () => {
+    if (!formData.startDate || !formData.returnDate) return 5
+    const start = new Date(formData.startDate)
+    const end = new Date(formData.returnDate)
+    return Math.ceil((end - start) / (1000 * 60 * 60 * 24))
+  }
+
+  const fetchSuitabilityScores = async () => {
+    if (!formData.destination || !formData.startDate) return
+    
+    setLoadingScores(true)
+    try {
+      const duration = calculateDuration()
+      const response = await travelAPI.getBatchVibeSuitability({
+        destination: formData.destination,
+        start_date: formData.startDate,
+        duration: duration,
+        origin: formData.origin || undefined
+      })
+      
+      if (response.data.success) {
+        setSuitabilityScores(response.data.data.scores)
+      }
+    } catch (error) {
+      console.error('Error fetching suitability scores:', error)
+      // Fallback to empty scores - will show "Select dates" message
+    } finally {
+      setLoadingScores(false)
+    }
+  }
+
   const handleVibeSelect = (vibe) => {
     console.log('🎯 Selecting vibe:', vibe.name);
     setSelectedVibe(vibe)
@@ -86,6 +127,9 @@ const VibeSelector = ({ onVibeSelect, onBack, formData }) => {
   }
 
   const getSeasonRecommendation = (vibe) => {
+    // Check if we have suitability score data
+    const score = suitabilityScores[vibe.id]
+    
     if (!formData.startDate) {
       return {
         isOptimal: false,
@@ -95,6 +139,32 @@ const VibeSelector = ({ onVibeSelect, onBack, formData }) => {
       }
     }
 
+    if (loadingScores) {
+      return {
+        isOptimal: false,
+        currentSeason: 'unknown',
+        recommendedSeason: vibe.season,
+        message: `Analyzing timing...`
+      }
+    }
+
+    if (score) {
+      // Use intelligent suitability score
+      const isOptimal = score.score >= 75
+      const isGood = score.score >= 50
+      
+      return {
+        isOptimal: isOptimal,
+        isGood: isGood,
+        currentSeason: 'analyzed',
+        recommendedSeason: vibe.season,
+        message: score.reason,
+        score: score.score,
+        label: score.label
+      }
+    }
+
+    // Fallback to basic season logic if no score data
     const currentDate = new Date(formData.startDate)
     const currentMonth = currentDate.getMonth() + 1
     
@@ -173,9 +243,11 @@ const VibeSelector = ({ onVibeSelect, onBack, formData }) => {
                 <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mb-3 ${
                   seasonInfo.isOptimal 
                     ? 'bg-green-100 text-green-800' 
-                    : 'bg-yellow-100 text-yellow-800'
+                    : seasonInfo.isGood
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : 'bg-orange-100 text-orange-800'
                 }`}>
-                  {seasonInfo.isOptimal ? '✓ Optimal Season' : '⚠ Consider Timing'}
+                  {seasonInfo.label || (seasonInfo.isOptimal ? '✓ Optimal Season' : seasonInfo.isGood ? '✔ Good Timing' : '⚠ Consider Timing')}
                 </div>
                 
                 <p className="text-sm text-gray-600 mb-3">{seasonInfo.message}</p>
